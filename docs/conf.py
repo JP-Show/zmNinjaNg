@@ -1,14 +1,19 @@
 # zmNinjaNG Documentation - Sphinx Configuration
 
+import json
 import os
 import sys
 
 # -- Project information -----------------------------------------------------
 
+# Read version from app/package.json
+_pkg_path = os.path.join(os.path.dirname(__file__), '..', 'app', 'package.json')
+with open(_pkg_path) as f:
+    release = json.load(f)['version']
+
 project = 'zmNinjaNG'
 copyright = '2025-2026, pliablepixels'
 author = 'pliablepixels'
-release = '0.2.4'
 
 # -- General configuration ---------------------------------------------------
 
