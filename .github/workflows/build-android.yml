@@ -39,6 +39,9 @@ jobs:
         working-directory: ./app
         run: npm ci
 
+      - name: Sync version to platform configs
+        run: node scripts/sync-version.js
+
       - name: Build web app
         working-directory: ./app
         run: npm run build
