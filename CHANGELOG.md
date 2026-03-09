@@ -1,5 +1,17 @@
 # Changelog
 
+## [zmNinjaNG-1.0.6](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.0.6) (2026-03-09)
+
+[Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.0.4...zmNinjaNG-1.0.6)
+
+**Implemented enhancements:**
+
+- feat: add user-togglable self-signed certificate support [\#46](https://github.com/pliablepixels/zmNinjaNG/issues/46)
+
+**Fixed bugs:**
+
+- Android App fails after being configured. [\#44](https://github.com/pliablepixels/zmNinjaNG/issues/44)
+
 ## [zmNinjaNG-1.0.4](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.0.4) (2026-03-08)
 
 [Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNg-1.0.3...zmNinjaNG-1.0.4)
