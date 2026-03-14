@@ -456,7 +456,9 @@
     "show_zones": "Zonen anzeigen",
     "hide_zones": "Zonen ausblenden",
     "zones_loading": "Zonen werden geladen...",
-    "no_zones": "Keine Zonen definiert"
+    "no_zones": "Keine Zonen definiert",
+    "exit_fullscreen": "Vollbild beenden",
+    "reset_zoom": "Zurücksetzen"
   },
   "montage": {
     "title": "Montage",

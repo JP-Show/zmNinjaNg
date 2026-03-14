@@ -17,8 +17,8 @@ import { Card } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
 import { Label } from '../components/ui/label';
-import { ArrowLeft, Settings, Maximize2, Clock, AlertTriangle, Download, ChevronUp, ChevronDown, Layers } from 'lucide-react';
-import { useState, useRef, useMemo } from 'react';
+import { ArrowLeft, Settings, Maximize2, Minimize2, Clock, AlertTriangle, Download, ChevronUp, ChevronDown, Layers } from 'lucide-react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { downloadSnapshotFromElement } from '../lib/download';
@@ -29,6 +29,7 @@ import { VideoPlayer } from '../components/video/VideoPlayer';
 import { ZoneOverlay } from '../components/video/ZoneOverlay';
 import { log, LogLevel } from '../lib/logger';
 import { parseMonitorRotation } from '../lib/monitor-rotation';
+import { useGesture } from '@use-gesture/react';
 
 // Extracted hooks and components
 import { usePTZControl, useAlarmControl, useModeControl, useMonitorNavigation } from './hooks';
@@ -46,8 +47,12 @@ export default function MonitorDetail() {
   const [showPTZ, setShowPTZ] = useState(true);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showZones, setShowZones] = useState(false);
-  const [scale, setScale] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
+
+  // Pinch-to-zoom state
+  const [pinchScale, setPinchScale] = useState(1);
+  const [isPinching, setIsPinching] = useState(false);
 
   // Navigation state
   const referrer = location.state?.from as string | undefined;
@@ -82,7 +87,7 @@ export default function MonitorDetail() {
   });
 
   // Custom hooks for extracted logic
-  const { swipeNavigation, isSliding } = useMonitorNavigation({
+  const { isSliding, enabledMonitors, onSwipeLeft, onSwipeRight } = useMonitorNavigation({
     currentMonitorId: id,
     cycleSeconds: settings.monitorDetailCycleSeconds,
   });
@@ -149,6 +154,48 @@ export default function MonitorDetail() {
     return `${width}x${height}`;
   }, [monitor?.Monitor.Height, monitor?.Monitor.Orientation, monitor?.Monitor.Width]);
 
+  // Combined gesture handler for swipe navigation + pinch-to-zoom
+  const bindGestures = useGesture(
+    {
+      onDrag: ({ movement: [mx], direction: [xDir], last, velocity: [vx] }) => {
+        if (pinchScale > 1.05) return; // Disable swipe while zoomed in
+        if (!enabledMonitors || enabledMonitors.length <= 1) return;
+
+        if (last) {
+          const didSwipe = Math.abs(mx) > 80 || vx > 0.5;
+          if (didSwipe) {
+            if (xDir < 0) onSwipeLeft();
+            else if (xDir > 0) onSwipeRight();
+          }
+        }
+      },
+      onPinch: ({ offset: [d], first, last }) => {
+        if (first) setIsPinching(true);
+        const newScale = Math.max(0.5, Math.min(4, d));
+        setPinchScale(newScale);
+        if (last) {
+          setIsPinching(false);
+          // Snap back to 1 if close enough
+          if (newScale < 1.05) setPinchScale(1);
+        }
+      },
+    },
+    {
+      drag: { axis: 'x', filterTaps: true, pointer: { touch: true } },
+      pinch: { scaleBounds: { min: 0.5, max: 4 }, rubberband: true },
+    }
+  );
+
+  const resetPinchZoom = useCallback(() => {
+    setPinchScale(1);
+  }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+    // Reset zoom when entering/exiting fullscreen
+    setPinchScale(1);
+  }, []);
+
   // Settings handlers
   const handleFeedFitChange = (value: string) => {
     if (!currentProfile) return;
@@ -200,8 +247,12 @@ export default function MonitorDetail() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
+    <div className={cn(
+      'flex flex-col h-full',
+      isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'bg-background'
+    )}>
+      {/* Header - Hidden in fullscreen */}
+      {!isFullscreen && (
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 sm:p-3 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
@@ -276,36 +327,96 @@ export default function MonitorDetail() {
           </Button>
         </div>
       </div>
+      )}
+
+      {/* Fullscreen exit bar */}
+      {isFullscreen && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]"
+          data-testid="monitor-detail-fullscreen-toolbar"
+        >
+          <div className="h-8 flex items-center justify-between px-3">
+            <span className="text-white/70 font-medium text-xs truncate min-w-0" title={monitor.Monitor.Name}>
+              {monitor.Monitor.Name}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="bg-red-600/80 hover:bg-red-600 text-white h-7 px-2 text-xs"
+              onClick={handleToggleFullscreen}
+              aria-label={t('monitor_detail.exit_fullscreen')}
+              data-testid="monitor-detail-exit-fullscreen"
+            >
+              <Minimize2 className="h-3.5 w-3.5 mr-1" />
+              {t('monitor_detail.exit_fullscreen')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
-      <div className="flex-1 p-2 sm:p-3 md:p-4 flex flex-col items-center justify-center bg-muted/10">
+      <div className={cn(
+        'flex-1 flex flex-col items-center justify-center',
+        isFullscreen
+          ? 'pt-[calc(2rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]'
+          : 'p-2 sm:p-3 md:p-4 bg-muted/10'
+      )}>
         <Card
-          {...swipeNavigation.bind()}
+          {...bindGestures()}
           className={cn(
-            'relative w-full max-w-5xl aspect-video bg-black overflow-hidden shadow-2xl border-0 touch-pan-y transition-shadow',
+            'relative bg-black overflow-hidden border-0 touch-pan-y transition-shadow',
+            isFullscreen
+              ? 'w-full h-full rounded-none shadow-none'
+              : 'w-full max-w-5xl aspect-video shadow-2xl',
             isSliding && 'monitor-slide-in',
             alarmBorderClass
           )}
         >
-          <VideoPlayer
-            monitor={monitor.Monitor}
-            profile={currentProfile}
-            externalMediaRef={mediaRef}
-            objectFit={settings.monitorDetailFeedFit}
-            showStatus={true}
-            className="data-[testid=monitor-player]"
-          />
-          <ZoneOverlay
-            zones={zones}
-            monitorWidth={Number(monitor.Monitor.Width) || 1920}
-            monitorHeight={Number(monitor.Monitor.Height) || 1080}
-            rotation={parseMonitorRotation(monitor.Monitor.Orientation)}
-            monitorId={monitor.Monitor.Id}
-            visible={showZones && !isZonesLoading}
-          />
+          <div
+            style={{
+              transform: `scale(${pinchScale})`,
+              transformOrigin: 'center center',
+              transition: isPinching ? 'none' : 'transform 0.2s ease-out',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            <VideoPlayer
+              monitor={monitor.Monitor}
+              profile={currentProfile}
+              externalMediaRef={mediaRef}
+              objectFit={isFullscreen ? 'contain' : settings.monitorDetailFeedFit}
+              showStatus={true}
+              className="data-[testid=monitor-player]"
+            />
+            <ZoneOverlay
+              zones={zones}
+              monitorWidth={Number(monitor.Monitor.Width) || 1920}
+              monitorHeight={Number(monitor.Monitor.Height) || 1080}
+              rotation={parseMonitorRotation(monitor.Monitor.Orientation)}
+              monitorId={monitor.Monitor.Id}
+              visible={showZones && !isZonesLoading}
+            />
+          </div>
+          {/* Zoom reset indicator */}
+          {pinchScale > 1.05 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className={cn(
+                'absolute right-2 h-7 text-xs opacity-80 z-10',
+                isFullscreen ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]' : 'bottom-2'
+              )}
+              onClick={resetPinchZoom}
+              data-testid="monitor-detail-zoom-reset"
+            >
+              {Math.round(pinchScale * 100)}% — {t('monitor_detail.reset_zoom')}
+            </Button>
+          )}
         </Card>
 
-        {/* Video Controls Bar */}
+        {/* Video Controls Bar - Hidden in fullscreen */}
+        {!isFullscreen && (
         <div className="w-full max-w-5xl mt-2 px-2 flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Button
@@ -352,20 +463,20 @@ export default function MonitorDetail() {
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setScale(scale === settings.streamScale ? 150 : settings.streamScale)}
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleToggleFullscreen}
+              aria-label={t('monitor_detail.maximize')}
+              data-testid="monitor-detail-maximize"
             >
-              {scale}%
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('monitor_detail.maximize')}>
               <Maximize2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
+        )}
 
-        {/* PTZ Controls */}
-        {monitor.Monitor.Controllable === '1' && (
+        {/* PTZ Controls - Hidden in fullscreen */}
+        {!isFullscreen && monitor.Monitor.Controllable === '1' && (
           <div className="mt-8 w-full max-w-md flex flex-col items-center">
             <Button
               variant="ghost"
@@ -395,7 +506,8 @@ export default function MonitorDetail() {
           </div>
         )}
 
-        {/* Monitor Controls Card */}
+        {/* Monitor Controls Card - Hidden in fullscreen */}
+        {!isFullscreen && (
         <div className="w-full max-w-5xl mt-8">
           <MonitorControlsCard
             hasAlarmStatus={hasAlarmStatus}
@@ -409,6 +521,7 @@ export default function MonitorDetail() {
             onModeChange={handleModeChange}
           />
         </div>
+        )}
       </div>
 
       {/* Settings Dialog */}

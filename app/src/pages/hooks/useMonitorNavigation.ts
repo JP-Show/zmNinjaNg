@@ -24,6 +24,8 @@ interface UseMonitorNavigationReturn {
   hasNext: boolean;
   swipeNavigation: ReturnType<typeof useSwipeNavigation>;
   isSliding: boolean;
+  onSwipeLeft: () => void;
+  onSwipeRight: () => void;
 }
 
 export function useMonitorNavigation({
@@ -55,20 +57,25 @@ export function useMonitorNavigation({
     };
   }, [monitorsData?.monitors, currentMonitorId]);
 
+  // Navigation callbacks
+  const onSwipeLeft = () => {
+    if (hasNext) {
+      const nextMonitor = enabledMonitors[currentIndex + 1];
+      navigate(`/monitors/${nextMonitor.Monitor.Id}`, { state: { from: location.pathname } });
+    }
+  };
+
+  const onSwipeRight = () => {
+    if (hasPrev) {
+      const prevMonitor = enabledMonitors[currentIndex - 1];
+      navigate(`/monitors/${prevMonitor.Monitor.Id}`, { state: { from: location.pathname } });
+    }
+  };
+
   // Swipe navigation between monitors
   const swipeNavigation = useSwipeNavigation({
-    onSwipeLeft: () => {
-      if (hasNext) {
-        const nextMonitor = enabledMonitors[currentIndex + 1];
-        navigate(`/monitors/${nextMonitor.Monitor.Id}`, { state: { from: location.pathname } });
-      }
-    },
-    onSwipeRight: () => {
-      if (hasPrev) {
-        const prevMonitor = enabledMonitors[currentIndex - 1];
-        navigate(`/monitors/${prevMonitor.Monitor.Id}`, { state: { from: location.pathname } });
-      }
-    },
+    onSwipeLeft,
+    onSwipeRight,
     threshold: 80,
     enabled: enabledMonitors.length > 1,
   });
@@ -102,5 +109,7 @@ export function useMonitorNavigation({
     hasNext,
     swipeNavigation,
     isSliding,
+    onSwipeLeft,
+    onSwipeRight,
   };
 }
