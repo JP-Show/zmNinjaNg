@@ -84,6 +84,9 @@ export default function Montage() {
   // Edit mode state lifted to page level
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Monitor label overlay toggle for fullscreen mode
+  const [showMonitorLabels, setShowMonitorLabels] = useState(false);
+
   // Fullscreen mode
   const { isFullscreen, handleToggleFullscreen } =
     useFullscreenMode({
@@ -283,6 +286,8 @@ export default function Montage() {
         <FullscreenControls
           onRefetch={() => refetch()}
           onExitFullscreen={() => handleToggleFullscreen(false)}
+          showLabels={showMonitorLabels}
+          onToggleLabels={() => setShowMonitorLabels((prev) => !prev)}
         />
       )}
 
@@ -326,7 +331,7 @@ export default function Montage() {
               onResizeStop={handleResizeStop}
             >
               {monitors.map(({ Monitor, Monitor_Status }) => (
-                <div key={Monitor.Id} className="relative group">
+                <div key={Monitor.Id} className="relative">
                   <MontageMonitor
                     monitor={Monitor}
                     status={Monitor_Status}
@@ -336,6 +341,7 @@ export default function Montage() {
                     isFullscreen={isFullscreen}
                     isEditing={isEditMode}
                     objectFit={settings.montageFeedFit}
+                    showOverlay={showMonitorLabels}
                   />
                 </div>
               ))}

@@ -496,7 +496,8 @@
     "done_editing": "Fini",
     "insomnia_enabled": "L'écran restera actif",
     "insomnia_disabled": "Veille d'écran activée",
-    "screen_too_small_for_editing": "L'écran est trop petit pour éditer la mise en page. Veuillez utiliser un écran plus grand ou faire pivoter votre appareil."
+    "screen_too_small_for_editing": "L'écran est trop petit pour éditer la mise en page. Veuillez utiliser un écran plus grand ou faire pivoter votre appareil.",
+    "toggle_labels": "Libellés des moniteurs"
   },
   "notification_history": {
     "title": "Notifications",

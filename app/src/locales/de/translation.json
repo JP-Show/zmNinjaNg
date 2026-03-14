@@ -496,7 +496,8 @@
     "done_editing": "Fertig",
     "insomnia_enabled": "Bildschirm bleibt wach",
     "insomnia_disabled": "Bildschirmschlaf aktiviert",
-    "screen_too_small_for_editing": "Bildschirm ist zu klein für Layout-Bearbeitung. Bitte verwenden Sie einen größeren Bildschirm oder drehen Sie Ihr Gerät."
+    "screen_too_small_for_editing": "Bildschirm ist zu klein für Layout-Bearbeitung. Bitte verwenden Sie einen größeren Bildschirm oder drehen Sie Ihr Gerät.",
+    "toggle_labels": "Monitor-Beschriftungen"
   },
   "notification_history": {
     "title": "Benachrichtigungen",

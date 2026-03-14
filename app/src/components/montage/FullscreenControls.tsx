@@ -8,16 +8,21 @@
 
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
-import { RefreshCw, Minimize } from 'lucide-react';
+import { RefreshCw, Minimize, Menu } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface FullscreenControlsProps {
   onRefetch: () => void;
   onExitFullscreen: () => void;
+  showLabels: boolean;
+  onToggleLabels: () => void;
 }
 
 export function FullscreenControls({
   onRefetch,
   onExitFullscreen,
+  showLabels,
+  onToggleLabels,
 }: FullscreenControlsProps) {
   const { t } = useTranslation();
 
@@ -29,6 +34,22 @@ export function FullscreenControls({
       <div className="h-8 flex items-center justify-between px-3">
         <span className="text-white/70 font-medium text-xs">{t('montage.title')}</span>
         <div className="flex items-center gap-1">
+          <Button
+            onClick={onToggleLabels}
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-7 w-7",
+              showLabels
+                ? "text-white bg-white/20 hover:bg-white/30"
+                : "text-white/70 hover:text-white hover:bg-white/10"
+            )}
+            title={t('montage.toggle_labels')}
+            aria-label={t('montage.toggle_labels')}
+            data-testid="montage-toggle-labels"
+          >
+            <Menu className="h-3.5 w-3.5" />
+          </Button>
           <Button
             onClick={onRefetch}
             variant="ghost"

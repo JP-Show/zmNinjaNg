@@ -496,7 +496,8 @@
     "done_editing": "Hecho",
     "insomnia_enabled": "La pantalla permanecerá activa",
     "insomnia_disabled": "Suspensión de pantalla activada",
-    "screen_too_small_for_editing": "La pantalla es demasiado pequeña para editar el diseño. Use una pantalla más grande o gire su dispositivo."
+    "screen_too_small_for_editing": "La pantalla es demasiado pequeña para editar el diseño. Use una pantalla más grande o gire su dispositivo.",
+    "toggle_labels": "Etiquetas de monitor"
   },
   "notification_history": {
     "title": "Notificaciones",

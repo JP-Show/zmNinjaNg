@@ -42,6 +42,7 @@ interface MontageMonitorProps {
   isFullscreen?: boolean;
   isEditing?: boolean;
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  showOverlay?: boolean;
 }
 
 function MontageMonitorComponent({
@@ -53,6 +54,7 @@ function MontageMonitorComponent({
   isFullscreen = false,
   isEditing = false,
   objectFit,
+  showOverlay = false,
 }: MontageMonitorProps) {
   const { t } = useTranslation();
   const isRunning = status?.Status === 'Connected';
@@ -165,17 +167,20 @@ function MontageMonitorComponent({
 
   return (
     <Card className={cn(
-      "h-full overflow-hidden flex flex-col group",
+      "h-full overflow-hidden flex flex-col",
       isFullscreen
         ? "border-none shadow-none bg-black rounded-none m-0 p-0"
         : "border-0 shadow-md bg-card hover:shadow-xl transition-shadow duration-200 ring-1 ring-border/50 hover:ring-primary/50"
     )}>
-      {/* Header / Drag Handle - Slides in on hover in fullscreen mode */}
+      {/* Header / Drag Handle - Toggled via toolbar button in fullscreen mode */}
       <div
         className={cn(
-          "flex items-center gap-1 px-2 h-8 transition-all duration-200 shrink-0 select-none z-10",
+          "flex items-center gap-1 px-2 h-8 shrink-0 select-none z-10",
           isFullscreen
-            ? "absolute top-0 left-0 right-0 bg-black/80 text-white -translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+            ? cn(
+                "absolute top-0 left-0 right-0 bg-black/80 text-white transition-all duration-200",
+                showOverlay ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+              )
             : "bg-card border-b",
           isEditing && !isFullscreen ? "drag-handle cursor-move hover:bg-accent/50" : "cursor-default"
         )}

@@ -494,7 +494,8 @@
     "edit_layout": "Edit",
     "done_editing": "Done",
     "insomnia_enabled": "Screen will stay awake",
-    "insomnia_disabled": "Screen sleep enabled"
+    "insomnia_disabled": "Screen sleep enabled",
+    "toggle_labels": "Monitor Labels"
   },
   "notification_history": {
     "title": "Notifications",
