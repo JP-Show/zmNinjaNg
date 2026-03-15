@@ -12,6 +12,7 @@ import { DebugSettings } from '../components/settings/DebugSettings';
 import { DisplaySettings } from '../components/settings/DisplaySettings';
 import { EventSettings } from '../components/settings/EventSettings';
 import { LanguageSettings } from '../components/settings/LanguageSettings';
+import { NavigationSettings } from '../components/settings/NavigationSettings';
 import { VideoSettings } from '../components/settings/VideoSettings';
 
 export default function Settings() {
@@ -30,6 +31,7 @@ export default function Settings() {
         <LanguageSettings />
         <VideoSettings />
         <DisplaySettings />
+        <NavigationSettings />
         <EventSettings />
         <DashboardSettings />
         <ConnectionSettings />

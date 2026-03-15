@@ -67,6 +67,8 @@ export interface ProfileSettings {
   allowSelfSignedCerts: boolean;
   // SHA-256 fingerprint of the trusted TLS certificate (TOFU pinning)
   trustedCertFingerprint: string | null;
+  // Custom sidebar nav order (array of route paths). Empty = default order.
+  sidebarNavOrder: string[];
 }
 
 interface SettingsState {
@@ -155,6 +157,8 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   allowSelfSignedCerts: false,
   // No pinned certificate by default
   trustedCertFingerprint: null,
+  // Default sidebar order (empty = use hardcoded order)
+  sidebarNavOrder: [],
 };
 
 export const useSettingsStore = create<SettingsState>()(

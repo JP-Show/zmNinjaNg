@@ -37,7 +37,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { useTranslation } from 'react-i18next';
 import { BackgroundTaskDrawer } from '../BackgroundTaskDrawer';
@@ -150,7 +150,7 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
   };
 
 
-  const navItems = [
+  const defaultNavItems = [
     { path: '/dashboard', label: t('sidebar.dashboard'), icon: LayoutDashboard },
     { path: '/monitors', label: t('sidebar.monitors'), icon: Video },
     { path: '/montage', label: t('sidebar.montage'), icon: LayoutGrid },
@@ -162,6 +162,19 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
     { path: '/server', label: t('sidebar.server'), icon: Server },
     { path: '/logs', label: t('sidebar.logs'), icon: FileText },
   ];
+
+  const savedOrder = profileSettings?.sidebarNavOrder;
+  const navItems = useMemo(() => {
+    if (!savedOrder || savedOrder.length === 0) return defaultNavItems;
+    // Sort by saved order; items not in the saved list go at the end
+    const orderMap = new Map(savedOrder.map((path, idx) => [path, idx]));
+    return [...defaultNavItems].sort((a, b) => {
+      const ai = orderMap.get(a.path) ?? 999;
+      const bi = orderMap.get(b.path) ?? 999;
+      return ai - bi;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedOrder, t]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
