@@ -44,6 +44,7 @@ import { cn } from '../../lib/utils';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { useTranslation } from 'react-i18next';
+import { getAppVersion } from '../../lib/version';
 import { BackgroundTaskDrawer } from '../BackgroundTaskDrawer';
 import { CertTrustDialog } from '../CertTrustDialog';
 import { onCertTrustRequest, type PendingCertTrust } from '../../lib/cert-trust-event';
@@ -413,6 +414,9 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
             {profileSettings?.insomnia ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
         )}
+        <p className={cn("text-[10px] text-muted-foreground/50 pt-1", isCollapsed ? "text-center" : "px-1")}>
+          v{getAppVersion()}
+        </p>
       </div>
     </div>
   );
