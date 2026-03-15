@@ -33,6 +33,7 @@ import {
   Globe,
   GripVertical,
   LayoutDashboard,
+  RotateCcw,
   Server,
   Eye,
   EyeOff,
@@ -180,9 +181,7 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
 
   const [isReordering, setIsReordering] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const navListRef = useRef<HTMLElement>(null);
-  const dragStartY = useRef(0);
 
   const saveNavOrder = useCallback((reordered: typeof navItems) => {
     if (!currentProfile) return;
@@ -191,37 +190,40 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
     });
   }, [currentProfile, updateProfileSettings]);
 
+  const resetNavOrder = useCallback(() => {
+    if (!currentProfile) return;
+    updateProfileSettings(currentProfile.id, { sidebarNavOrder: [] });
+  }, [currentProfile, updateProfileSettings]);
+
+  // Live reorder: swap items as the pointer crosses them for smooth animation
   const handlePointerDown = useCallback((e: React.PointerEvent, index: number) => {
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setDragIndex(index);
-    setHoverIndex(index);
-    dragStartY.current = e.clientY;
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragIndex === null || !navListRef.current) return;
-    // Find which item the pointer is over based on element positions
     const items = navListRef.current.querySelectorAll('[data-nav-reorder]');
     for (let i = 0; i < items.length; i++) {
       const rect = items[i].getBoundingClientRect();
-      if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
-        setHoverIndex(i);
+      const midY = rect.top + rect.height / 2;
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom && i !== dragIndex) {
+        // Swap live as the pointer crosses the midpoint of another item
+        if ((i < dragIndex && e.clientY < midY) || (i > dragIndex && e.clientY > midY)) {
+          const reordered = [...navItems];
+          [reordered[dragIndex], reordered[i]] = [reordered[i], reordered[dragIndex]];
+          saveNavOrder(reordered);
+          setDragIndex(i); // Track the dragged item's new index
+        }
         return;
       }
     }
-  }, [dragIndex]);
+  }, [dragIndex, navItems, saveNavOrder]);
 
   const handlePointerUp = useCallback(() => {
-    if (dragIndex !== null && hoverIndex !== null && dragIndex !== hoverIndex) {
-      const reordered = [...navItems];
-      const [moved] = reordered.splice(dragIndex, 1);
-      reordered.splice(hoverIndex, 0, moved);
-      saveNavOrder(reordered);
-    }
     setDragIndex(null);
-    setHoverIndex(null);
-  }, [dragIndex, hoverIndex, navItems, saveNavOrder]);
+  }, []);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -246,7 +248,19 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
       <div className="flex-1 px-3 py-2 overflow-y-auto">
         {/* Reorder toggle — only when expanded */}
         {!isCollapsed && (
-          <div className="flex justify-end mb-1 px-1">
+          <div className="flex justify-end gap-1 mb-1 px-1">
+            {isReordering && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={resetNavOrder}
+                title={t('settings.nav_order_reset')}
+                data-testid="nav-reorder-reset"
+              >
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -271,17 +285,14 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
 
             if (isReordering && !isCollapsed) {
               const isDragging = dragIndex === index;
-              const isDropTarget = hoverIndex === index && dragIndex !== null && dragIndex !== index;
               return (
                 <div
                   key={item.path}
                   data-nav-reorder
                   onPointerDown={(e) => handlePointerDown(e, index)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground select-none touch-none",
-                    isDragging && "opacity-50 bg-muted",
-                    isDropTarget && "bg-accent/50 border border-dashed border-primary/40",
-                    !isDragging && "cursor-grab"
+                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground select-none touch-none transition-all duration-150",
+                    isDragging ? "opacity-50 bg-primary/10 scale-[1.02]" : "cursor-grab"
                   )}
                   data-testid={`nav-reorder-${item.path.replace('/', '')}`}
                 >
