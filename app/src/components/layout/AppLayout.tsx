@@ -83,22 +83,20 @@ function FloatingNotificationBell() {
   if (unreadCount === 0) return null;
 
   return (
-    <Button
-      variant="default"
-      size="icon"
-      className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg opacity-80 hover:opacity-100 pb-[env(safe-area-inset-bottom)]"
+    <button
+      className="fixed bottom-5 right-5 z-50 h-9 w-9 rounded-full bg-foreground/20 backdrop-blur-sm hover:bg-foreground/30 transition-colors flex items-center justify-center mb-[env(safe-area-inset-bottom)]"
       onClick={() => navigate('/notifications/history')}
       aria-label={`${unreadCount} unread notifications`}
       data-testid="notification-bell"
     >
       <Bell className={cn(
-        "h-5 w-5 transition-transform",
+        "h-4 w-4 text-foreground/70",
         isRinging && "animate-[ring_0.5s_ease-in-out_2]"
       )} />
-      <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
+      <span className="absolute -top-1 -right-1 h-4 min-w-4 px-0.5 flex items-center justify-center text-[9px] font-bold rounded-full bg-destructive text-destructive-foreground">
         {unreadCount > 99 ? '99+' : unreadCount}
       </span>
-    </Button>
+    </button>
   );
 }
 
