@@ -181,7 +181,9 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
 
   const [isReordering, setIsReordering] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
   const navListRef = useRef<HTMLElement>(null);
+  const dragOriginY = useRef(0);
 
   const saveNavOrder = useCallback((reordered: typeof navItems) => {
     if (!currentProfile) return;
@@ -195,26 +197,35 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
     updateProfileSettings(currentProfile.id, { sidebarNavOrder: [] });
   }, [currentProfile, updateProfileSettings]);
 
-  // Live reorder: swap items as the pointer crosses them for smooth animation
   const handlePointerDown = useCallback((e: React.PointerEvent, index: number) => {
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setDragIndex(index);
+    setDragOffsetY(0);
+    dragOriginY.current = e.clientY;
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragIndex === null || !navListRef.current) return;
+
+    // Move the dragged item visually with the pointer
+    setDragOffsetY(e.clientY - dragOriginY.current);
+
+    // Live swap when crossing another item's midpoint
     const items = navListRef.current.querySelectorAll('[data-nav-reorder]');
     for (let i = 0; i < items.length; i++) {
+      if (i === dragIndex) continue;
       const rect = items[i].getBoundingClientRect();
       const midY = rect.top + rect.height / 2;
-      if (e.clientY >= rect.top && e.clientY <= rect.bottom && i !== dragIndex) {
-        // Swap live as the pointer crosses the midpoint of another item
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
         if ((i < dragIndex && e.clientY < midY) || (i > dragIndex && e.clientY > midY)) {
           const reordered = [...navItems];
           [reordered[dragIndex], reordered[i]] = [reordered[i], reordered[dragIndex]];
           saveNavOrder(reordered);
-          setDragIndex(i); // Track the dragged item's new index
+          setDragIndex(i);
+          // Reset origin to current pointer so offset stays smooth after swap
+          dragOriginY.current = e.clientY;
+          setDragOffsetY(0);
         }
         return;
       }
@@ -223,6 +234,7 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
 
   const handlePointerUp = useCallback(() => {
     setDragIndex(null);
+    setDragOffsetY(0);
   }, []);
 
   return (
@@ -291,9 +303,12 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
                   data-nav-reorder
                   onPointerDown={(e) => handlePointerDown(e, index)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground select-none touch-none transition-all duration-150",
-                    isDragging ? "opacity-50 bg-primary/10 scale-[1.02]" : "cursor-grab"
+                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium select-none touch-none",
+                    isDragging
+                      ? "bg-primary/15 text-foreground shadow-md z-10 relative scale-[1.03]"
+                      : "text-muted-foreground cursor-grab transition-all duration-200"
                   )}
+                  style={isDragging ? { transform: `translateY(${dragOffsetY}px) scale(1.03)` } : undefined}
                   data-testid={`nav-reorder-${item.path.replace('/', '')}`}
                 >
                   <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground/50" />
