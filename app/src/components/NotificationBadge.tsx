@@ -40,7 +40,11 @@ export function NotificationBadge() {
 
   return (
     <button
-      className="relative inline-flex items-center justify-center h-7 w-7 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+      className={
+        isRinging
+          ? "relative inline-flex items-center justify-center h-7 w-7 rounded-full bg-destructive/20 transition-colors duration-500"
+          : "relative inline-flex items-center justify-center h-7 w-7 rounded-full bg-muted hover:bg-muted/80 transition-colors duration-500"
+      }
       onClick={(e) => { e.stopPropagation(); navigate('/notifications/history'); }}
       aria-label={`${unreadCount} unread notifications`}
       data-testid="notification-badge"
