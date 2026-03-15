@@ -87,7 +87,7 @@ function NotificationBell() {
       variant="ghost"
       size="icon"
       className="relative h-8 w-8"
-      onClick={() => navigate('/notifications')}
+      onClick={() => navigate('/notifications/history')}
       aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       data-testid="notification-bell"
     >
@@ -293,11 +293,19 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
           {!isCollapsed && (
             <>
               <h1 className="text-xl font-bold tracking-tight whitespace-nowrap">{t('app.name')}</h1>
-              <LanguageSwitcher />
+              <div className="flex items-center gap-1 ml-auto">
+                <LanguageSwitcher />
+                <NotificationBell />
+              </div>
             </>
           )}
         </div>
-        {isCollapsed && <LanguageSwitcher collapsed />}
+        {isCollapsed && (
+          <div className="flex flex-col items-center gap-1">
+            <LanguageSwitcher collapsed />
+            <NotificationBell />
+          </div>
+        )}
         {!isCollapsed && currentProfile && (
           <p className="text-xs text-muted-foreground font-medium px-1 truncate">
             {currentProfile.name}
@@ -634,11 +642,6 @@ export default function AppLayout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden relative w-full pt-[calc(3rem+env(safe-area-inset-top))] md:pt-0 pb-[env(safe-area-inset-bottom)]">
-        {/* Desktop notification bell — top right */}
-        <div className="hidden md:block fixed top-2 right-3 z-20">
-          <NotificationBell />
-        </div>
-
         {/* Background gradient blob for visual interest */}
         <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-primary/5 to-transparent -z-10 pointer-events-none" />
 
