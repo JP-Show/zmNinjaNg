@@ -47,6 +47,21 @@
   }
 }
 
+/* Montage grid: larger resize handle for touch/mobile */
+.react-grid-item > .react-resizable-handle::after {
+  width: 12px !important;
+  height: 12px !important;
+  right: 2px !important;
+  bottom: 2px !important;
+  border-right: 3px solid rgba(250, 204, 21, 0.8) !important;
+  border-bottom: 3px solid rgba(250, 204, 21, 0.8) !important;
+}
+
+.react-grid-item > .react-resizable-handle {
+  width: 28px !important;
+  height: 28px !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

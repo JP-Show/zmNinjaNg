@@ -506,7 +506,18 @@
     "insomnia_enabled": "Bildschirm bleibt wach",
     "insomnia_disabled": "Bildschirmschlaf aktiviert",
     "screen_too_small_for_editing": "Bildschirm ist zu klein für Layout-Bearbeitung. Bitte verwenden Sie einen größeren Bildschirm oder drehen Sie Ihr Gerät.",
-    "toggle_labels": "Monitor-Beschriftungen"
+    "toggle_labels": "Monitor-Beschriftungen",
+    "toggle_toolbar": "Symbolleiste umschalten",
+    "saved_layouts": "Gespeicherte Layouts",
+    "save_layout": "Layout speichern",
+    "save_layout_desc": "Speichern Sie die aktuelle Monitoranordnung für schnellen Zugriff.",
+    "layout_name": "Layout-Name",
+    "layout_name_placeholder": "z.B. Nachtansicht, Außenbereich",
+    "save_name_required": "Bitte einen Namen eingeben",
+    "layout_saved": "Layout \"{{name}}\" gespeichert",
+    "layout_deleted": "Layout \"{{name}}\" gelöscht",
+    "fit_crop": "Zuschn.",
+    "fit_fit": "Einpass."
   },
   "notification_history": {
     "title": "Benachrichtigungen",

@@ -17,17 +17,16 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { MontageMonitor } from '../components/monitors/MontageMonitor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { RefreshCw, Video, AlertCircle, LayoutDashboard, Maximize, Pencil } from 'lucide-react';
+import { RefreshCw, Video, AlertCircle, Maximize, Pencil } from 'lucide-react';
 import { filterEnabledMonitors, filterMonitorsByGroup } from '../lib/filters';
 import { useGroupFilter } from '../hooks/useGroupFilter';
 import { GroupFilterSelect } from '../components/filters/GroupFilterSelect';
 import { cn } from '../lib/utils';
-import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { usePinchZoom } from '../hooks/usePinchZoom';
-import { NotificationBadge } from '../components/NotificationBadge';
 import { useInsomnia } from '../hooks/useInsomnia';
 import GridLayout, { WidthProvider } from 'react-grid-layout';
+import type { Layout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -39,6 +38,7 @@ import {
   useContainerResize,
   useFullscreenMode,
 } from '../components/montage';
+import { INTERNAL_COLS } from '../components/montage/hooks/useMontageGrid';
 
 const WrappedGridLayout = WidthProvider(GridLayout);
 
@@ -85,8 +85,14 @@ export default function Montage() {
   // Edit mode state lifted to page level
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Active saved layout name (persisted in settings)
+  const activeLayoutName = settings.montageActiveLayoutName;
+
   // Monitor label overlay toggle for fullscreen mode
   const [showMonitorLabels, setShowMonitorLabels] = useState(false);
+
+  // Toolbar visibility (controlled from app header eye button)
+  const showToolbar = settings.montageShowToolbar;
 
   // Fullscreen mode
   const { isFullscreen, handleToggleFullscreen } =
@@ -103,6 +109,7 @@ export default function Montage() {
     isScreenTooSmall,
     currentWidthRef,
     handleApplyGridLayout,
+    handleLoadSavedLayout,
     handleLayoutChange,
     handleResizeStop,
     handleWidthChange,
@@ -110,7 +117,6 @@ export default function Montage() {
     monitors,
     currentProfile,
     settings,
-    isFullscreen,
     isEditMode,
   });
 
@@ -128,6 +134,13 @@ export default function Montage() {
     enabled: !isFullscreen,
   });
 
+  const handleApplyGridLayoutWithClear = (cols: number) => {
+    handleApplyGridLayout(cols);
+    if (currentProfile) {
+      updateSettings(currentProfile.id, { montageActiveLayoutName: null });
+    }
+  };
+
   const handleFeedFitChange = (value: string) => {
     if (!currentProfile) return;
     updateSettings(currentProfile.id, {
@@ -135,11 +148,31 @@ export default function Montage() {
     });
   };
 
-  const handleEditModeToggle = () => {
-    if (!isEditMode && window.innerWidth < 640) {
-      toast.error(t('montage.screen_too_small_for_editing'));
-      return;
+  // Saved layout handlers
+  const handleSaveLayout = (name: string) => {
+    if (!currentProfile) return;
+    const saved = settings.montageSavedLayouts || [];
+    const entry = { name, layout: [...layout], displayCols: gridCols };
+    updateSettings(currentProfile.id, {
+      montageSavedLayouts: [...saved, entry],
+    });
+  };
+
+  const handleLoadLayout = (saved: { name: string; layout: Layout[]; displayCols: number }) => {
+    handleLoadSavedLayout(saved.layout, saved.displayCols);
+    if (currentProfile) {
+      updateSettings(currentProfile.id, { montageActiveLayoutName: saved.name });
     }
+  };
+
+  const handleDeleteLayout = (index: number) => {
+    if (!currentProfile) return;
+    const saved = [...(settings.montageSavedLayouts || [])];
+    saved.splice(index, 1);
+    updateSettings(currentProfile.id, { montageSavedLayouts: saved });
+  };
+
+  const handleEditModeToggle = () => {
     setIsEditMode((prev) => !prev);
   };
 
@@ -162,7 +195,7 @@ export default function Montage() {
     return (
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">{t('montage.title')}</h1>
+          <h1 className="text-lg font-bold tracking-tight">{t('montage.title')}</h1>
         </div>
         <div className="p-4 bg-destructive/10 text-destructive rounded-lg flex items-center gap-2">
           <AlertCircle className="h-5 w-5" />
@@ -177,7 +210,7 @@ export default function Montage() {
     return (
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">{t('montage.title')}</h1>
+          <h1 className="text-lg font-bold tracking-tight">{t('montage.title')}</h1>
           <Button onClick={() => refetch()} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('common.refresh')}
@@ -202,50 +235,33 @@ export default function Montage() {
       {/* Header - Hidden in fullscreen mode */}
       {!isFullscreen && (
         <>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 sm:p-3 border-b bg-card/50 backdrop-blur-sm shrink-0 z-10">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div>
-                <h1 className="text-base sm:text-xl md:text-2xl font-bold tracking-tight flex items-center gap-2">
-                  <LayoutDashboard className="h-4 w-4 sm:h-5 sm:w-5" />
-                  {t('montage.title')}
-                </h1>
-              </div>
-              <NotificationBadge />
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Toolbar row - toggleable via eye button in app header */}
+          {showToolbar && (
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap p-2 sm:p-3 border-b bg-card/50 backdrop-blur-sm shrink-0 z-10">
               <GroupFilterSelect />
               <GridLayoutControls
                 isMobile={isMobile}
                 gridCols={gridCols}
-                onApplyGridLayout={handleApplyGridLayout}
+                activeLayoutName={activeLayoutName}
+                onApplyGridLayout={handleApplyGridLayoutWithClear}
+                savedLayouts={settings.montageSavedLayouts || []}
+                onSaveLayout={handleSaveLayout}
+                onLoadLayout={handleLoadLayout}
+                onDeleteLayout={handleDeleteLayout}
               />
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground hidden md:inline">
-                  {t('montage.feed_fit')}
-                </span>
-                <Select value={settings.montageFeedFit} onValueChange={handleFeedFitChange}>
-                  <SelectTrigger className="h-8 sm:h-9 w-[170px]" data-testid="montage-fit-select">
-                    <SelectValue placeholder={t('montage.feed_fit')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contain" data-testid="montage-fit-contain">
-                      {t('montage.fit_contain')}
-                    </SelectItem>
-                    <SelectItem value="cover" data-testid="montage-fit-cover">
-                      {t('montage.fit_cover')}
-                    </SelectItem>
-                    <SelectItem value="fill" data-testid="montage-fit-fill">
-                      {t('montage.fit_fill')}
-                    </SelectItem>
-                    <SelectItem value="none" data-testid="montage-fit-none">
-                      {t('montage.fit_none')}
-                    </SelectItem>
-                    <SelectItem value="scale-down" data-testid="montage-fit-scale-down">
-                      {t('montage.fit_scale_down')}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={settings.montageFeedFit} onValueChange={handleFeedFitChange}>
+                <SelectTrigger className="h-8 sm:h-9 w-[80px]" data-testid="montage-fit-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cover" data-testid="montage-fit-cover">
+                    {t('montage.fit_crop')}
+                  </SelectItem>
+                  <SelectItem value="contain" data-testid="montage-fit-contain">
+                    {t('montage.fit_fit')}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <Button onClick={() => refetch()} variant="outline" size="sm" className="h-8 sm:h-9">
                 <RefreshCw className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('common.refresh')}</span>
@@ -274,7 +290,7 @@ export default function Montage() {
                 <span className="hidden sm:inline">{t('montage.fullscreen')}</span>
               </Button>
             </div>
-          </div>
+          )}
           {isScreenTooSmall && (
             <p className="text-xs text-destructive px-2 sm:px-3 pb-2">
               {t('montage.screen_too_small')}
@@ -301,7 +317,7 @@ export default function Montage() {
           'flex-1 overflow-auto bg-muted/10',
           isFullscreen
             ? 'pt-[calc(2rem+env(safe-area-inset-top))] overscroll-contain'
-            : 'p-2 sm:p-3 md:p-4 touch-pan-y'
+            : 'touch-pan-y'
         )}
       >
         <div
@@ -320,15 +336,14 @@ export default function Montage() {
           >
             <WrappedGridLayout
               layout={layout}
-              cols={gridCols}
+              cols={INTERNAL_COLS}
               rowHeight={GRID_LAYOUT.montageRowHeight}
-              margin={[isFullscreen ? 0 : GRID_LAYOUT.montageMargin, isFullscreen ? 0 : GRID_LAYOUT.montageMargin]}
+              margin={[0, 0]}
               containerPadding={[0, 0]}
               compactType="vertical"
               preventCollision={false}
               isResizable={isEditMode}
               isDraggable={isEditMode}
-              draggableHandle=".drag-handle"
               onLayoutChange={handleLayoutChange}
               onResizeStop={handleResizeStop}
             >

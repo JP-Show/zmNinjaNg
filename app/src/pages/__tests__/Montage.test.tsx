@@ -80,13 +80,13 @@ describe('Montage Layout Calculations', () => {
       const height = calculateHeightUnits(monitorMap, '1', 1, gridWidth, cols, margin);
 
       // Aspect ratio should be 1080/1920 = 0.5625
-      // With gridWidth=1200, cols=2, margin=4:
-      // columnWidth = (1200 - 4 * (2-1)) / 2 = (1200 - 4) / 2 = 598
-      // itemWidth = 598 * 1 + 4 * 0 = 598
+      // With gridWidth=1200, cols=2, margin=4, rowHeight=1:
+      // columnWidth = (1200 - 4) / 2 = 598
+      // itemWidth = 598
       // heightPx = 598 * 0.5625 = 336.375
-      // unit = (336.375 + 4) / (10 + 4) = 340.375 / 14 = 24.31
-      // rounded = 24
-      expect(height).toBe(24);
+      // unit = (336.375 + 4) / (1 + 4) = 340.375 / 5 = 68.075
+      // rounded = 68
+      expect(height).toBe(68);
     });
 
     it('calculates correct height for 90° rotated 1920x1080 monitor (should become 1080x1920)', () => {
@@ -107,13 +107,13 @@ describe('Montage Layout Calculations', () => {
 
       // For 90° rotation, dimensions should swap: 1080x1920
       // Aspect ratio should be 1920/1080 = 1.777... (tall)
-      // With gridWidth=1200, cols=2, margin=4:
+      // With gridWidth=1200, cols=2, margin=4, rowHeight=1:
       // columnWidth = (1200 - 4) / 2 = 598
-      // itemWidth = 598 * 1 + 4 * 0 = 598
+      // itemWidth = 598
       // heightPx = 598 * 1.777... = 1063.11
-      // unit = (1063.11 + 4) / (10 + 4) = 1067.11 / 14 = 76.22
-      // rounded = 76
-      expect(height).toBe(76);
+      // unit = (1063.11 + 4) / (1 + 4) = 1067.11 / 5 = 213.42
+      // rounded = 213
+      expect(height).toBe(213);
     });
 
     it('calculates correct height for 270° rotated monitor (should also swap dimensions)', () => {
@@ -133,7 +133,7 @@ describe('Montage Layout Calculations', () => {
       const height = calculateHeightUnits(monitorMap, '3', 1, gridWidth, cols, margin);
 
       // 270° rotation should also swap dimensions like 90°
-      expect(height).toBe(76);
+      expect(height).toBe(213);
     });
 
     it('returns default height when monitor not found in map', () => {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Layouts } from 'react-grid-layout';
+import type { Layout, Layouts } from 'react-grid-layout';
 import { LogLevel } from '../lib/log-level';
 import type { BandwidthMode } from '../lib/zmninja-ng-constants';
 
@@ -29,6 +29,7 @@ export interface ProfileSettings {
   eventMontageGridCols: number; // Grid columns for EventMontage page
   montageIsFullscreen: boolean; // Fullscreen state for Montage page
   montageFeedFit: MonitorFeedFit; // Object-fit for montage feeds
+  montageShowToolbar: boolean; // Show/hide montage toolbar row
   eventsViewMode: EventsViewMode; // List vs montage view for Events page
   monitorsFeedFit: MonitorFeedFit; // Object-fit for monitor grid feeds
   monitorDetailFeedFit: MonitorFeedFit; // Object-fit for monitor detail feed
@@ -69,6 +70,10 @@ export interface ProfileSettings {
   trustedCertFingerprint: string | null;
   // Custom sidebar nav order (array of route paths). Empty = default order.
   sidebarNavOrder: string[];
+  // Named saved montage layouts
+  montageSavedLayouts: Array<{ name: string; layout: Layout[]; displayCols: number }>;
+  // Name of the currently active saved layout (null = using a preset column count)
+  montageActiveLayoutName: string | null;
 }
 
 interface SettingsState {
@@ -118,7 +123,8 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   montageGridCols: 2,
   eventMontageGridCols: 2,
   montageIsFullscreen: false,
-  montageFeedFit: 'contain',
+  montageFeedFit: 'cover',
+  montageShowToolbar: true,
   eventsViewMode: 'list',
   monitorsFeedFit: 'cover',
   monitorDetailFeedFit: 'contain',
@@ -159,6 +165,8 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   trustedCertFingerprint: null,
   // Default sidebar order (empty = use hardcoded order)
   sidebarNavOrder: [],
+  montageSavedLayouts: [],
+  montageActiveLayoutName: null,
 };
 
 export const useSettingsStore = create<SettingsState>()(

@@ -506,7 +506,18 @@
     "insomnia_enabled": "La pantalla permanecerá activa",
     "insomnia_disabled": "Suspensión de pantalla activada",
     "screen_too_small_for_editing": "La pantalla es demasiado pequeña para editar el diseño. Use una pantalla más grande o gire su dispositivo.",
-    "toggle_labels": "Etiquetas de monitor"
+    "toggle_labels": "Etiquetas de monitor",
+    "toggle_toolbar": "Alternar barra de herramientas",
+    "saved_layouts": "Diseños guardados",
+    "save_layout": "Guardar diseño",
+    "save_layout_desc": "Guarda la disposición actual de los monitores para acceso rápido.",
+    "layout_name": "Nombre del diseño",
+    "layout_name_placeholder": "ej. Vista nocturna, Exteriores",
+    "save_name_required": "Ingrese un nombre",
+    "layout_saved": "Diseño \"{{name}}\" guardado",
+    "layout_deleted": "Diseño \"{{name}}\" eliminado",
+    "fit_crop": "Recortar",
+    "fit_fit": "Ajustar"
   },
   "notification_history": {
     "title": "Notificaciones",

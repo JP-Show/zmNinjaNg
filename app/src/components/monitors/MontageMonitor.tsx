@@ -31,7 +31,6 @@ import { downloadSnapshotFromElement } from '../../lib/download';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { log, LogLevel } from '../../lib/logger';
-import { getMonitorAspectRatio } from '../../lib/monitor-rotation';
 
 interface MontageMonitorProps {
   monitor: Monitor;
@@ -65,9 +64,7 @@ function MontageMonitorComponent({
   const [connKey, setConnKey] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
-  const resolvedFit = objectFit ?? (isFullscreen ? 'cover' : 'contain');
-  const aspectRatio = getMonitorAspectRatio(monitor.Width, monitor.Height, monitor.Orientation);
-
+  const resolvedFit = objectFit ?? 'cover';
   // Track previous connKey to send CMD_QUIT before regenerating
   const prevConnKeyRef = useRef<number>(0);
   const isInitialMountRef = useRef(true);
@@ -167,10 +164,11 @@ function MontageMonitorComponent({
 
   return (
     <Card className={cn(
-      "h-full overflow-hidden flex flex-col",
+      "h-full overflow-hidden flex flex-col rounded-none",
       isFullscreen
-        ? "border-none shadow-none bg-black rounded-none m-0 p-0"
-        : "border-0 shadow-md bg-card hover:shadow-xl transition-shadow duration-200 ring-1 ring-border/50 hover:ring-primary/50"
+        ? "border-none shadow-none bg-black m-0 p-0"
+        : "border-0 shadow-none bg-card",
+      isEditing && !isFullscreen && "ring-2 ring-yellow-400/70"
     )}>
       {/* Header / Drag Handle - Toggled via toolbar button in fullscreen mode */}
       <div
@@ -182,7 +180,7 @@ function MontageMonitorComponent({
                 showOverlay ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
               )
             : "bg-card border-b",
-          isEditing && !isFullscreen ? "drag-handle cursor-move hover:bg-accent/50" : "cursor-default"
+          isEditing && !isFullscreen ? "hover:bg-accent/50" : "cursor-default"
         )}
       >
         {/* Monitor status and name */}
@@ -279,14 +277,12 @@ function MontageMonitorComponent({
           isFullscreen ? "bg-black" : "bg-black/90",
           !isFullscreen && "cursor-pointer"
         )}
-        style={!isFullscreen && aspectRatio ? { aspectRatio } : undefined}
         onClick={() => !isEditing && navigate(`/monitors/${monitor.Id}`)}
       >
-        {/* Skeleton loader with correct aspect ratio */}
+        {/* Skeleton loader */}
         {!imageLoaded && (
           <div
             className="absolute inset-0 bg-muted/20 animate-pulse flex items-center justify-center"
-            style={aspectRatio ? { aspectRatio } : undefined}
           >
             <div className="text-muted-foreground text-xs">{monitor.Width} × {monitor.Height}</div>
           </div>

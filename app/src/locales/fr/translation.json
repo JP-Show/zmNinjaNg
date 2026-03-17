@@ -506,7 +506,18 @@
     "insomnia_enabled": "L'écran restera actif",
     "insomnia_disabled": "Veille d'écran activée",
     "screen_too_small_for_editing": "L'écran est trop petit pour éditer la mise en page. Veuillez utiliser un écran plus grand ou faire pivoter votre appareil.",
-    "toggle_labels": "Libellés des moniteurs"
+    "toggle_labels": "Libellés des moniteurs",
+    "toggle_toolbar": "Basculer la barre d'outils",
+    "saved_layouts": "Dispositions enregistrées",
+    "save_layout": "Enregistrer la disposition",
+    "save_layout_desc": "Enregistrer l'arrangement actuel des moniteurs pour un accès rapide.",
+    "layout_name": "Nom de la disposition",
+    "layout_name_placeholder": "ex. Vue nocturne, Extérieur",
+    "save_name_required": "Veuillez entrer un nom",
+    "layout_saved": "Disposition \"{{name}}\" enregistrée",
+    "layout_deleted": "Disposition \"{{name}}\" supprimée",
+    "fit_crop": "Rogner",
+    "fit_fit": "Ajuster"
   },
   "notification_history": {
     "title": "Notifications",

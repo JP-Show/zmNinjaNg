@@ -77,8 +77,8 @@ export const GRID_LAYOUT = {
   // Minimum card width in grid units
   minCardWidth: 50,
 
-  // Montage-specific row height (more compact for many monitors)
-  montageRowHeight: 10,
+  // Montage row height in pixels — 1px for pixel-level precision (no black bars with contain)
+  montageRowHeight: 1,
 
   // Grid calculation frequencies
   montageScaleFrequency: 300, // How often to recalculate montage scales (ms)

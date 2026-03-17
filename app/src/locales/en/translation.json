@@ -504,7 +504,18 @@
     "done_editing": "Done",
     "insomnia_enabled": "Screen will stay awake",
     "insomnia_disabled": "Screen sleep enabled",
-    "toggle_labels": "Monitor Labels"
+    "toggle_labels": "Monitor Labels",
+    "toggle_toolbar": "Toggle Toolbar",
+    "saved_layouts": "Saved Layouts",
+    "save_layout": "Save Layout",
+    "save_layout_desc": "Save the current monitor arrangement for quick access later.",
+    "layout_name": "Layout Name",
+    "layout_name_placeholder": "e.g. Night View, All Outdoor",
+    "save_name_required": "Please enter a name",
+    "layout_saved": "Layout \"{{name}}\" saved",
+    "layout_deleted": "Layout \"{{name}}\" deleted",
+    "fit_crop": "Crop",
+    "fit_fit": "Fit"
   },
   "notification_history": {
     "title": "Notifications",

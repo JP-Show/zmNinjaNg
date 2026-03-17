@@ -1,7 +1,9 @@
 /**
  * Hook for Montage grid layout management
  *
- * Handles grid layout calculations, normalization, and persistence.
+ * Uses a fixed 12-column internal grid. The user's "display columns" setting
+ * (1–5) controls the default item width (12/displayCols). Items can be resized
+ * to any width 1–12 for mixed sizes; vertical compaction reflows items.
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -14,6 +16,9 @@ import type { Layout } from 'react-grid-layout';
 import type { Monitor, MonitorData } from '../../../api/types';
 import type { Profile } from '../../../api/types';
 import type { ProfileSettings } from '../../../stores/settings';
+
+/** Internal grid always uses 12 columns for fine-grained positioning. */
+export const INTERNAL_COLS = 12;
 
 export const getMaxColsForWidth = (width: number, minWidth: number, margin: number): number => {
   if (width <= 0) return 1;
@@ -44,19 +49,37 @@ const calculateHeightUnits = (
   monitorId: string,
   widthUnits: number,
   gridWidth: number,
-  cols: number,
   margin: number
 ): number => {
   const monitor = monitorMap.get(monitorId);
-  if (!monitor) return 6;
+  if (!monitor) return 200;
 
+  const CARD_HEADER_HEIGHT = 32; // h-8 header bar with monitor name + buttons
   const aspectRatio = parseAspectRatioValue(monitor);
-  const columnWidth = (gridWidth - margin * (cols - 1)) / cols;
+  const columnWidth = (gridWidth - margin * (INTERNAL_COLS - 1)) / INTERNAL_COLS;
   const itemWidth = columnWidth * widthUnits + margin * (widthUnits - 1);
-  const heightPx = itemWidth * aspectRatio;
+  const videoPx = itemWidth * aspectRatio;
+  const heightPx = videoPx + CARD_HEADER_HEIGHT;
   const unit = (heightPx + margin) / (GRID_LAYOUT.montageRowHeight + margin);
 
-  return Math.max(2, Math.round(unit));
+  return Math.max(2, Math.ceil(unit));
+};
+
+/**
+ * Migrate old layouts that used gridCols directly as the column count.
+ * Old layouts have small w values (1–5); new layouts use 12-col space.
+ */
+const migrateLayout = (stored: Layout[], displayCols: number): Layout[] => {
+  const maxW = Math.max(...stored.map((item) => item.w));
+  if (maxW <= 5) {
+    const scale = Math.floor(INTERNAL_COLS / displayCols);
+    return stored.map((item) => ({
+      ...item,
+      w: Math.min(INTERNAL_COLS, item.w * scale),
+      x: Math.min(INTERNAL_COLS - 1, item.x * scale),
+    }));
+  }
+  return stored;
 };
 
 const areLayoutsEqual = (a: Layout[], b: Layout[]): boolean => {
@@ -76,7 +99,6 @@ interface UseMontageGridOptions {
   monitors: MonitorData[];
   currentProfile: Profile | null;
   settings: ProfileSettings;
-  isFullscreen: boolean;
   isEditMode: boolean;
 }
 
@@ -88,6 +110,7 @@ interface UseMontageGridReturn {
   currentWidthRef: React.MutableRefObject<number>;
   hasWidth: boolean;
   handleApplyGridLayout: (cols: number) => void;
+  handleLoadSavedLayout: (savedLayout: Layout[], displayCols: number) => void;
   handleLayoutChange: (nextLayout: Layout[]) => void;
   handleResizeStop: (layout: Layout[], oldItem: Layout, newItem: Layout) => void;
   handleWidthChange: (width: number) => void;
@@ -98,235 +121,257 @@ export function useMontageGrid({
   monitors,
   currentProfile,
   settings,
-  isFullscreen,
   isEditMode,
 }: UseMontageGridOptions): UseMontageGridReturn {
   const { t } = useTranslation();
   const updateSettings = useSettingsStore((state) => state.updateProfileSettings);
   const saveMontageLayout = useSettingsStore((state) => state.saveMontageLayout);
 
-  const [gridCols, setGridCols] = useState<number>(settings.montageGridCols);
+  // displayCols = user's chosen number of visible columns (1–5)
+  const [displayCols, setDisplayCols] = useState<number>(settings.montageGridCols);
   const [isScreenTooSmall, setIsScreenTooSmall] = useState(false);
   const [layout, setLayout] = useState<Layout[]>([]);
   const [hasWidth, setHasWidth] = useState(false);
+  // Track whether initial layout has been built (prevent re-running on monitor refetch)
+  const initializedRef = useRef(false);
+  // Skip the restore effect when handleApplyGridLayout/handleLoadSavedLayout already set layout
+  const skipRestoreRef = useRef(false);
 
   const screenTooSmallRef = useRef(false);
   const currentWidthRef = useRef(0);
+  // Width at which heights were last calculated — used to skip trivial changes
+  const lastCalcWidthRef = useRef(0);
 
-  // Refs for callback stability
+  // Refs for stable access in callbacks without causing re-renders
+  const monitorMapRef = useRef<Map<string, Monitor>>(new Map());
+  const isEditModeRef = useRef(isEditMode);
   const currentProfileRef = useRef(currentProfile);
-  const updateSettingsRef = useRef(updateSettings);
+  const settingsRef = useRef(settings);
 
-  useEffect(() => {
-    currentProfileRef.current = currentProfile;
-    updateSettingsRef.current = updateSettings;
-  }, [currentProfile, updateSettings]);
+  useEffect(() => { isEditModeRef.current = isEditMode; }, [isEditMode]);
+  useEffect(() => { currentProfileRef.current = currentProfile; }, [currentProfile]);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
 
   const monitorMap = useMemo(() => {
     return new Map(monitors.map((item) => [item.Monitor.Id, item.Monitor]));
   }, [monitors]);
 
+  useEffect(() => { monitorMapRef.current = monitorMap; }, [monitorMap]);
+
+  /** Default item width in internal-col units for the current display setting. */
+  const defaultItemWidth = (cols: number) => Math.max(1, Math.floor(INTERNAL_COLS / cols));
+
   const buildDefaultLayout = useCallback(
-    (monitorList: MonitorData[], cols: number, gridWidth: number, margin: number): Layout[] => {
+    (monitorList: MonitorData[], cols: number, gridWidth: number): Layout[] => {
+      const w = defaultItemWidth(cols);
+      const map = monitorMapRef.current;
       return monitorList.map(({ Monitor }, index) => {
-        const widthUnits = 1;
-        const heightUnits = calculateHeightUnits(
-          monitorMap,
-          Monitor.Id,
-          widthUnits,
-          gridWidth,
-          cols,
-          margin
-        );
+        const h = calculateHeightUnits(map, Monitor.Id, w, gridWidth, 0);
+        const perRow = Math.floor(INTERNAL_COLS / w);
         return {
           i: Monitor.Id,
-          x: index % cols,
-          y: Math.floor(index / cols) * heightUnits,
-          w: widthUnits,
-          h: heightUnits,
+          x: (index % perRow) * w,
+          y: Math.floor(index / perRow) * h,
+          w,
+          h,
           minW: 1,
-          minH: 2,
+          minH: 50,
         };
       });
     },
-    [monitorMap]
+    [] // Uses ref — stable identity
   );
 
-  const normalizeLayout = useCallback(
-    (current: Layout[], cols: number, gridWidth: number, margin: number): Layout[] => {
+  const recalcHeights = useCallback(
+    (current: Layout[], gridWidth: number): Layout[] => {
+      const map = monitorMapRef.current;
       return current.map((item) => ({
         ...item,
-        x: item.x % cols,
-        h: calculateHeightUnits(monitorMap, item.i, item.w, gridWidth, cols, margin),
+        w: Math.min(item.w, INTERNAL_COLS),
+        x: Math.min(item.x, INTERNAL_COLS - item.w),
+        h: calculateHeightUnits(map, item.i, item.w, gridWidth, 0),
       }));
     },
-    [monitorMap]
+    [] // Uses ref — stable identity
   );
 
-  // Update grid state when profile changes
+  // Update displayCols when profile changes (external change only)
   useEffect(() => {
-    setGridCols(settings.montageGridCols);
+    setDisplayCols(settings.montageGridCols);
   }, [currentProfile?.id, settings.montageGridCols]);
 
-  // Build/restore layout when monitors or settings change
+  // Build initial layout once when we have monitors + width.
+  // Also re-runs when displayCols changes (user picked a new column count).
   useEffect(() => {
     if (monitors.length === 0) return;
     if (!hasWidth || currentWidthRef.current === 0) return;
 
-    const margin = isFullscreen ? 0 : GRID_LAYOUT.montageMargin;
-    let nextLayout: Layout[] = [];
-    const stored = settings.montageLayouts?.lg;
-
-    if (stored && stored.length > 0) {
-      const existingIds = new Set(monitors.map((item) => item.Monitor.Id));
-      const filtered = stored.filter((item) => existingIds.has(item.i));
-      const presentIds = new Set(filtered.map((item) => item.i));
-      const missing = monitors.filter((item) => !presentIds.has(item.Monitor.Id));
-      const defaults = buildDefaultLayout(missing, gridCols, currentWidthRef.current, margin);
-      nextLayout = [...filtered, ...defaults];
-    } else {
-      nextLayout = buildDefaultLayout(monitors, gridCols, currentWidthRef.current, margin);
+    // handleApplyGridLayout / handleLoadSavedLayout already set layout directly
+    if (skipRestoreRef.current) {
+      skipRestoreRef.current = false;
+      initializedRef.current = true;
+      return;
     }
 
-    const normalized = normalizeLayout(
-      nextLayout,
-      gridCols,
-      currentWidthRef.current,
-      margin
-    );
+    const stored = settingsRef.current.montageLayouts?.lg;
+    let nextLayout: Layout[];
 
+    if (stored && stored.length > 0) {
+      const migrated = migrateLayout(stored, displayCols);
+      const existingIds = new Set(monitors.map((item) => item.Monitor.Id));
+      const filtered = migrated.filter((item) => existingIds.has(item.i));
+      const presentIds = new Set(filtered.map((item) => item.i));
+      const missing = monitors.filter((item) => !presentIds.has(item.Monitor.Id));
+      const defaults = buildDefaultLayout(missing, displayCols, currentWidthRef.current);
+      nextLayout = [...filtered, ...defaults];
+    } else {
+      nextLayout = buildDefaultLayout(monitors, displayCols, currentWidthRef.current);
+    }
+
+    const normalized = recalcHeights(nextLayout, currentWidthRef.current);
     setLayout((prev) => (areLayoutsEqual(prev, normalized) ? prev : normalized));
-  }, [monitors, gridCols, settings.montageLayouts, hasWidth, isFullscreen, buildDefaultLayout, normalizeLayout]);
+    initializedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayCols, hasWidth]);
+
+  // When the monitor list changes (new/removed monitors), add missing ones
+  // but don't reset existing positions.
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    if (monitors.length === 0) return;
+
+    setLayout((prev) => {
+      const existingIds = new Set(prev.map((item) => item.i));
+      const newMonitors = monitors.filter((m) => !existingIds.has(m.Monitor.Id));
+      if (newMonitors.length === 0) {
+        // No new monitors; just remove items for monitors that no longer exist
+        const currentIds = new Set(monitors.map((m) => m.Monitor.Id));
+        const filtered = prev.filter((item) => currentIds.has(item.i));
+        return filtered.length === prev.length ? prev : filtered;
+      }
+      const defaults = buildDefaultLayout(newMonitors, displayCols, currentWidthRef.current);
+      return [...prev, ...defaults];
+    });
+  }, [monitors, displayCols, buildDefaultLayout]);
 
   const handleApplyGridLayout = useCallback(
     (cols: number) => {
-      if (!currentProfile) return;
+      if (!currentProfileRef.current) return;
 
-      const margin = isFullscreen ? 0 : GRID_LAYOUT.montageMargin;
-      const maxCols = getMaxColsForWidth(currentWidthRef.current, GRID_LAYOUT.minCardWidth, margin);
-      if (cols > maxCols) {
-        toast.error(t('montage.screen_too_small'));
-        setIsScreenTooSmall(true);
-        screenTooSmallRef.current = true;
-        return;
-      }
+      const nextLayout = buildDefaultLayout(monitors, cols, currentWidthRef.current);
 
-      setGridCols(cols);
+      skipRestoreRef.current = true;
+      setDisplayCols(cols);
       setIsScreenTooSmall(false);
       screenTooSmallRef.current = false;
+      setLayout(nextLayout);
 
-      updateSettings(currentProfile.id, {
+      const profileId = currentProfileRef.current.id;
+      updateSettings(profileId, {
         montageGridRows: cols,
         montageGridCols: cols,
       });
-
-      const nextLayout = buildDefaultLayout(monitors, cols, currentWidthRef.current, margin);
-      setLayout(nextLayout);
-      saveMontageLayout(currentProfile.id, { ...settings.montageLayouts, lg: nextLayout });
+      saveMontageLayout(profileId, { ...settingsRef.current.montageLayouts, lg: nextLayout });
 
       toast.success(t('montage.grid_applied', { columns: cols }));
     },
-    [
-      currentProfile,
-      isFullscreen,
-      monitors,
-      settings.montageLayouts,
-      updateSettings,
-      saveMontageLayout,
-      buildDefaultLayout,
-      t,
-    ]
+    [monitors, updateSettings, saveMontageLayout, buildDefaultLayout, t]
+  );
+
+  const handleLoadSavedLayout = useCallback(
+    (savedLayout: Layout[], cols: number) => {
+      if (!currentProfileRef.current) return;
+
+      skipRestoreRef.current = true;
+      const normalized = recalcHeights(savedLayout, currentWidthRef.current);
+      setDisplayCols(cols);
+      setLayout(normalized);
+
+      const profileId = currentProfileRef.current.id;
+      updateSettings(profileId, { montageGridCols: cols, montageGridRows: cols });
+      saveMontageLayout(profileId, { ...settingsRef.current.montageLayouts, lg: normalized });
+    },
+    [updateSettings, saveMontageLayout, recalcHeights]
   );
 
   const handleWidthChange = useCallback(
     (width: number) => {
-      const isFirstMeasurement = currentWidthRef.current === 0;
+      const isFirstMeasurement = lastCalcWidthRef.current === 0;
       currentWidthRef.current = width;
 
-      const maxCols = getMaxColsForWidth(
-        width,
-        GRID_LAYOUT.minCardWidth,
-        isFullscreen ? 0 : GRID_LAYOUT.montageMargin
-      );
-      const tooSmall = gridCols > maxCols;
-
       if (isFirstMeasurement) {
-        if (tooSmall) {
-          setGridCols(maxCols);
-          setIsScreenTooSmall(false);
-          screenTooSmallRef.current = false;
-          if (currentProfileRef.current) {
-            updateSettingsRef.current(currentProfileRef.current.id, {
-              montageGridCols: maxCols,
-            });
-          }
-        } else {
-          setIsScreenTooSmall(false);
-          screenTooSmallRef.current = false;
-        }
-
+        lastCalcWidthRef.current = width;
         setHasWidth(true);
         return;
       }
 
-      setIsScreenTooSmall(tooSmall);
-      if (tooSmall && !screenTooSmallRef.current) {
-        toast.error(t('montage.screen_too_small'));
-      }
-      screenTooSmallRef.current = tooSmall;
-
-      setLayout((prev) => {
-        return normalizeLayout(prev, gridCols, width, isFullscreen ? 0 : GRID_LAYOUT.montageMargin);
-      });
+      // Recalculate heights to match new column pixel widths so aspect
+      // ratios stay correct (especially for "Fit"/contain mode).
+      // Jiggle is prevented by handleLayoutChange being a no-op in
+      // non-edit mode — RGL compaction won't trigger re-render loops.
+      lastCalcWidthRef.current = width;
+      setLayout((prev) => recalcHeights(prev, width));
     },
-    [gridCols, isFullscreen, t, normalizeLayout]
+    [recalcHeights]
   );
 
   const handleLayoutChange = useCallback(
     (nextLayout: Layout[]) => {
-      setLayout((prev) => (areLayoutsEqual(prev, nextLayout) ? prev : nextLayout));
-      if (isEditMode && currentProfile) {
-        saveMontageLayout(currentProfile.id, { ...settings.montageLayouts, lg: nextLayout });
-      }
+      // Only persist when user is actively editing (drag/resize).
+      // Never overwrite React layout state from onLayoutChange — RGL manages
+      // its own internal layout. Our state is the source of truth for explicit
+      // changes (column switch, resize stop, width change). Overwriting here
+      // would revert recalculated heights with RGL's stale values.
+      if (!isEditModeRef.current) return;
+      if (!currentProfileRef.current) return;
+
+      saveMontageLayout(currentProfileRef.current.id, {
+        ...settingsRef.current.montageLayouts,
+        lg: nextLayout,
+      });
     },
-    [isEditMode, currentProfile, settings.montageLayouts, saveMontageLayout]
+    [saveMontageLayout]
   );
 
   const handleResizeStop = useCallback(
     (_layout: Layout[], _oldItem: Layout, newItem: Layout) => {
+      const map = monitorMapRef.current;
       const adjustedHeight = calculateHeightUnits(
-        monitorMap,
+        map,
         newItem.i,
         newItem.w,
         currentWidthRef.current,
-        gridCols,
-        isFullscreen ? 0 : GRID_LAYOUT.montageMargin
+        0
       );
 
       setLayout((prev) => {
         const nextLayout = prev.map((item) =>
           item.i === newItem.i ? { ...item, h: adjustedHeight, w: newItem.w } : item
         );
-        if (isEditMode && currentProfile) {
-          saveMontageLayout(currentProfile.id, { ...settings.montageLayouts, lg: nextLayout });
+        if (isEditModeRef.current && currentProfileRef.current) {
+          saveMontageLayout(currentProfileRef.current.id, {
+            ...settingsRef.current.montageLayouts,
+            lg: nextLayout,
+          });
         }
         return areLayoutsEqual(prev, nextLayout) ? prev : nextLayout;
       });
     },
-    [monitorMap, gridCols, isFullscreen, isEditMode, currentProfile, settings.montageLayouts, saveMontageLayout]
+    [saveMontageLayout]
   );
 
   return {
     layout,
-    gridCols,
+    gridCols: displayCols,
     isScreenTooSmall,
     monitorMap,
     currentWidthRef,
     hasWidth,
     handleApplyGridLayout,
+    handleLoadSavedLayout,
     handleLayoutChange,
     handleResizeStop,
     handleWidthChange,
-    setGridCols,
+    setGridCols: setDisplayCols,
   };
 }

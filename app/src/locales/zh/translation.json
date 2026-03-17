@@ -506,7 +506,18 @@
     "insomnia_enabled": "屏幕将保持唤醒",
     "insomnia_disabled": "屏幕休眠已启用",
     "screen_too_small_for_editing": "屏幕太小,无法编辑布局。请使用更大的屏幕或旋转设备。",
-    "toggle_labels": "监视器标签"
+    "toggle_labels": "监视器标签",
+    "toggle_toolbar": "切换工具栏",
+    "saved_layouts": "已保存的布局",
+    "save_layout": "保存布局",
+    "save_layout_desc": "保存当前监视器排列以便快速访问。",
+    "layout_name": "布局名称",
+    "layout_name_placeholder": "例如：夜间视图、所有室外",
+    "save_name_required": "请输入名称",
+    "layout_saved": "布局 \"{{name}}\" 已保存",
+    "layout_deleted": "布局 \"{{name}}\" 已删除",
+    "fit_crop": "裁剪",
+    "fit_fit": "适应"
   },
   "notification_history": {
     "title": "通知",
