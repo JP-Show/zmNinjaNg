@@ -266,125 +266,154 @@ Montage Page
 
 **Location**: ``src/pages/Montage.tsx``
 
-Displays all monitors in a grid layout for simultaneous viewing.
+Displays all monitors in an edge-to-edge grid layout for simultaneous
+viewing. Uses ``react-grid-layout`` with a fixed 12-column internal grid
+so items can be resized to any width while the user selects 1–5 "display
+columns" as a default.
 
 .. _architecture-1:
 
 Architecture
 ~~~~~~~~~~~~
 
+The page delegates layout logic to dedicated hooks from
+``src/components/montage/``:
+
+- **useMontageGrid** – manages layout state, column calculations,
+  aspect-ratio-aware height, saved layout persistence, and migration
+  from older layout formats.
+- **useContainerResize** – wraps ``ResizeObserver`` with debounced
+  width tracking (first measurement fires immediately; subsequent
+  changes debounce at 500 ms).
+- **useFullscreenMode** – toggles fullscreen via the Fullscreen API.
+
 .. code:: tsx
 
+   import {
+     GridLayoutControls,
+     FullscreenControls,
+     useMontageGrid,
+     useContainerResize,
+     useFullscreenMode,
+   } from ‘../components/montage’;
+   import { INTERNAL_COLS } from ‘../components/montage/hooks/useMontageGrid’;
+
    export default function Montage() {
-     const currentProfile = useProfileStore((state) => state.currentProfile);
-     const gridCols = useMontageStore((state) => state.gridCols);
-     const { data: monitors } = useQuery({
-       queryKey: ['monitors', currentProfile?.id],
-       queryFn: () => fetchMonitors(currentProfile!.id),
-       enabled: !!currentProfile,
+     const { currentProfile, settings } = useCurrentProfile();
+     const { data: monitors } = useQuery({ ... });
+
+     const {
+       layout, gridCols, isScreenTooSmall, monitorMap,
+       currentWidthRef, hasWidth,
+       handleApplyGridLayout, handleLoadSavedLayout,
+       handleLayoutChange, handleResizeStop, handleWidthChange,
+     } = useMontageGrid({ monitors, currentProfile, settings, isEditMode });
+
+     const { containerRef } = useContainerResize({
+       onWidthChange: handleWidthChange,
+       currentWidthRef,
      });
 
-     if (!currentProfile) {
-       return <ProfileRequired />;
-     }
-
      return (
-       <IonPage>
-         <IonHeader>
-           <MontageHeader />
-         </IonHeader>
-         <IonContent>
-           <MontageGrid
-             monitors={monitors}
-             gridCols={gridCols}
-           />
-         </IonContent>
-       </IonPage>
+       <WrappedGridLayout
+         cols={INTERNAL_COLS}          // always 12
+         layout={layout}
+         rowHeight={GRID_LAYOUT.montageRowHeight}
+         margin={[0, 0]}              // edge-to-edge
+         containerPadding={[0, 0]}
+         onLayoutChange={handleLayoutChange}
+         onResizeStop={handleResizeStop}
+       >
+         {layout.map(item => (
+           <MontageMonitor key={item.i} monitor={...} />
+         ))}
+       </WrappedGridLayout>
      );
    }
 
-The Same Infinite Loop Issue
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+12-Column Internal Grid
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Montage also uses ResizeObserver and hit the same bug:
+``INTERNAL_COLS = 12`` is the fixed column count passed to
+``react-grid-layout``. The user’s "display columns" setting (1–5)
+controls default item width: ``w = 12 / displayCols``. Items can be
+resized to any width 1–12 for mixed sizes; vertical compaction reflows
+items automatically.
+
+Saved Layouts
+~~~~~~~~~~~~~
+
+Users can save, load, and delete named layouts. Each saved layout stores
+the ``Layout[]`` array and the ``displayCols`` at save time.
+
+- **Save**: ``handleSaveLayout(name)`` persists to profile settings via
+  ``saveMontageLayout()`` in the settings store.
+- **Load**: ``handleLoadSavedLayout(layout, displayCols)`` restores the
+  grid and column count.
+- **Delete**: ``handleDeleteLayout(index)`` removes from the saved list.
+- **Active name**: ``settings.montageActiveLayoutName`` tracks which
+  saved layout is currently loaded (cleared when the user switches to a
+  preset column count).
+
+Layout Migration
+~~~~~~~~~~~~~~~~
+
+``migrateLayout()`` in ``useMontageGrid`` handles old layouts where
+``w`` values ranged 1–5 (matching the old column count). If
+``max(w) <= 5``, it scales ``w`` and ``x`` into the 12-column space:
+``w * (12 / displayCols)``.
+
+Aspect-Ratio Height Calculation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each grid item’s height is computed from the monitor’s aspect ratio:
+
+.. code:: typescript
+
+   const CARD_HEADER_HEIGHT = 32;  // h-8 header bar
+   const columnWidth = (gridWidth - margin * (INTERNAL_COLS - 1)) / INTERNAL_COLS;
+   const itemWidth = columnWidth * widthUnits + margin * (widthUnits - 1);
+   const videoPx = itemWidth * (height / width);  // from monitor dimensions
+   const heightPx = videoPx + CARD_HEADER_HEIGHT;
+   const unit = (heightPx + margin) / (rowHeight + margin);
+   return Math.max(2, Math.ceil(unit));
+
+Toolbar Toggle
+~~~~~~~~~~~~~~
+
+An eye-toggle button in the title row shows/hides the toolbar
+(group filter, grid controls, fit selector, refresh, edit, fullscreen).
+State is stored in ``settings.montageShowToolbar`` and persisted per
+profile. The i18n key is ``montage.toggle_toolbar``.
+
+The ResizeObserver / Zustand Infinite Loop
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Montage uses ``ResizeObserver`` to track container width and Zustand to
+persist settings. This combination can cause infinite loops when
+callbacks reference unstable Zustand selectors or ``useTranslation()``’s
+``t`` function (both create new references each render).
+
+The fix is the ref-based pattern used throughout ``useMontageGrid``:
 
 .. code:: tsx
 
-   function Montage() {
-     const currentProfile = useProfileStore((state) => state.currentProfile);
-     const updateSettings = useProfileStore((state) => state.updateSettings);
-     const { t } = useTranslation();  // Also an unstable reference!
+   // Refs for unstable values
+   const currentProfileRef = useRef(currentProfile);
+   const settingsRef = useRef(settings);
+   const tRef = useRef(t);
 
-     const handleWidthChange = useCallback((width: number) => {
-       const maxCols = getMaxColsForWidth(width, MIN_CARD_WIDTH, GRID_MARGIN);
+   useEffect(() => {
+     currentProfileRef.current = currentProfile;
+   }, [currentProfile]);
 
-       if (gridCols > maxCols) {
-         setGridCols(maxCols);
+   // Callbacks only use refs + primitives – no unstable deps
+   const handleWidthChange = useCallback((width: number) => {
+     // ... uses currentProfileRef.current, settingsRef.current
+   }, []);  // stable
 
-         if (currentProfile) {
-           updateSettings(currentProfile.id, { montageGridCols: maxCols });
-         }
-
-         toast.error(t('montage.screen_too_small'));  // Uses t function
-       }
-     }, [gridCols, currentProfile, updateSettings, t]);  // All unstable!
-   }
-
-**Additional Complexity:**
-
-The ``t`` function from ``useTranslation()`` is also unstable - gets a
-new reference on every render.
-
-**The Fix:**
-
-Same pattern - use refs for all unstable dependencies:
-
-.. code:: tsx
-
-   function Montage() {
-     const currentProfile = useProfileStore((state) => state.currentProfile);
-     const updateSettings = useProfileStore((state) => state.updateSettings);
-     const { t } = useTranslation();
-
-     // Refs for all unstable values
-     const currentProfileRef = useRef(currentProfile);
-     const updateSettingsRef = useRef(updateSettings);
-     const tRef = useRef(t);
-
-     // Keep refs synchronized
-     useEffect(() => {
-       currentProfileRef.current = currentProfile;
-       updateSettingsRef.current = updateSettings;
-       tRef.current = t;
-     }, [currentProfile, updateSettings, t]);
-
-     // Stable callback - only primitive dependencies
-     const handleWidthChange = useCallback((width: number) => {
-       const maxCols = getMaxColsForWidth(width, MIN_CARD_WIDTH, GRID_MARGIN);
-
-       if (gridCols > maxCols) {
-         setGridCols(maxCols);
-
-         if (currentProfileRef.current) {
-           updateSettingsRef.current(currentProfileRef.current.id, {
-             montageGridCols: maxCols
-           });
-         }
-
-         toast.error(tRef.current('montage.screen_too_small'));
-       }
-     }, [gridCols]);  // Only primitive
-   }
-
-**Lesson Learned:**
-
-This bug happened twice in the codebase (DashboardLayout first, then
-Montage weeks later) because: - The pattern (ResizeObserver + Zustand)
-is common - The bug doesn’t appear immediately - only when resize events
-occur - Developers might not realize the same pitfall applies - Without
-understanding the root cause, it’s easy to repeat
-
-Now we document it clearly and watch for this pattern in code reviews.
+This same pattern was applied in DashboardLayout first, then Montage.
+Watch for it whenever ``ResizeObserver`` + Zustand appear together.
 
 Monitors Page
 -------------

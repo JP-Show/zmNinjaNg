@@ -206,26 +206,60 @@ MontageMonitor
 
 **Location**: ``src/components/monitors/MontageMonitor.tsx``
 
-A simplified version of MonitorCard optimized for the montage view with
-many monitors.
+A simplified version of MonitorCard optimized for the montage grid.
 
-**Differences from MonitorCard:** - Minimal UI (no buttons, just stream
-and status) - Smaller footprint for grid display - Click to view
-full-screen - Uses same ``useMonitorStream`` hook
+**Differences from MonitorCard:**
 
-**Usage:**
+- Minimal UI (header with name + status, stream image, no action buttons)
+- Edge-to-edge styling: ``rounded-none``, ``shadow-none``, no hover ring
+- Edit-mode indicator: yellow ring (``ring-2 ring-yellow-400/70``)
+  when ``isEditing`` is true
+- Default ``objectFit`` is ``cover``; overridable via prop
+- Uses same ``useMonitorStream`` hook for stream URLs
 
-.. code:: tsx
+**Props:**
 
-   <MontageGrid>
-     {monitors.map(monitor => (
-       <MontageMonitor
-         key={monitor.Id}
-         monitor={monitor}
-         onPress={() => navigate(`/monitors/${monitor.Id}`)}
-       />
-     ))}
-   </MontageGrid>
+- ``monitor`` – monitor data object
+- ``isFullscreen`` – whether the montage is in fullscreen mode
+- ``isEditing`` – highlights the card with a yellow ring
+- ``objectFit`` – CSS object-fit value (default ``cover``)
+- ``onPress`` – click handler (navigates to monitor detail)
+
+GridLayoutControls
+~~~~~~~~~~~~~~~~~~
+
+**Location**: ``src/components/montage/GridLayoutControls.tsx``
+
+Provides column presets (1–5) and saved layout management. Renders as a
+``Sheet`` on mobile, ``DropdownMenu`` on desktop.
+
+**Props:**
+
+- ``isMobile`` – controls mobile vs desktop rendering
+- ``gridCols`` – current display column count
+- ``activeLayoutName`` – name of the loaded saved layout (or null)
+- ``onApplyGridLayout(cols)`` – apply a preset column count
+- ``savedLayouts`` – array of ``{ name, layout, displayCols }``
+- ``onSaveLayout(name)`` / ``onLoadLayout(saved)`` /
+  ``onDeleteLayout(index)`` – saved layout CRUD
+
+Includes a ``SaveLayoutDialog`` for naming layouts before saving.
+
+Montage Hooks
+~~~~~~~~~~~~~
+
+All hooks are exported from ``src/components/montage/index.ts``.
+
+- **useMontageGrid** – layout state, column calculations, aspect-ratio
+  height, saved layout persistence, layout migration. Returns layout
+  array, handlers, and refs.
+- **useContainerResize** – ``ResizeObserver`` wrapper with 500 ms
+  debounce. First measurement fires immediately; subsequent width
+  changes are debounced so height recalculation only runs after resizing
+  stops.
+- **useFullscreenMode** – toggles fullscreen via the Fullscreen API.
+- **getMaxColsForWidth(width, minWidth, margin)** – utility that
+  computes the maximum display columns that fit a given container width.
 
 PTZControls
 ~~~~~~~~~~~
