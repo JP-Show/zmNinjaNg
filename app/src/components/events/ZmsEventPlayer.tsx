@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next';
 import { httpGet } from '../../lib/http';
 import { log, LogLevel } from '../../lib/logger';
 import { getEventZmsUrl, getZmsControlUrl } from '../../lib/url-builder';
+import { useZoomPan } from '../../hooks/useZoomPan';
+import { ZoomControls } from '../ui/ZoomControls';
 
 // ZoneMinder stream command constants
 const ZM_CMD = {
@@ -188,6 +190,9 @@ export function ZmsEventPlayer({
   }, [maxScoreFrameId, goToFrame]);
 
   // Speed presets
+  // Pinch-to-zoom and pan for ZMS image
+  const zoomPan = useZoomPan({ maxScale: 4 });
+
   const speedPresets = [
     { label: '0.25x', value: 25 },
     { label: '0.5x', value: 50 },
@@ -199,22 +204,40 @@ export function ZmsEventPlayer({
   return (
     <div className={className}>
       {/* Video Display */}
-      <Card className="overflow-hidden shadow-2xl border-0 ring-1 ring-border/20 bg-black">
+      <Card
+        ref={zoomPan.ref}
+        {...zoomPan.bind()}
+        className="overflow-hidden shadow-2xl border-0 ring-1 ring-border/20 bg-black touch-none relative"
+      >
         <div className="aspect-video relative bg-black">
-          <img
-            src={zmsUrl}
-            alt={t('event_detail.event_playback')}
-            className="w-full h-full object-contain"
-          />
+          <div ref={zoomPan.innerRef}>
+            <img
+              src={zmsUrl}
+              alt={t('event_detail.event_playback')}
+              className="w-full h-full object-contain"
+            />
+          </div>
 
           {/* Status Badge */}
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4 z-10">
             <Badge variant="secondary" className="gap-2 bg-blue-500/80 text-white hover:bg-blue-500">
               <AlertCircle className="h-3 w-3" />
               {t('event_detail.zms_playback')}
             </Badge>
           </div>
         </div>
+        <ZoomControls
+          onZoomIn={zoomPan.zoomIn}
+          onZoomOut={zoomPan.zoomOut}
+          onReset={zoomPan.reset}
+          onPanLeft={zoomPan.panLeft}
+          onPanRight={zoomPan.panRight}
+          onPanUp={zoomPan.panUp}
+          onPanDown={zoomPan.panDown}
+          isZoomed={zoomPan.isZoomed}
+          scale={zoomPan.scale}
+          className="bottom-2 left-2"
+        />
       </Card>
 
       {/* Playback Controls */}

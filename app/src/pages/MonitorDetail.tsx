@@ -29,12 +29,13 @@ import { VideoPlayer } from '../components/video/VideoPlayer';
 import { ZoneOverlay } from '../components/video/ZoneOverlay';
 import { log, LogLevel } from '../lib/logger';
 import { parseMonitorRotation } from '../lib/monitor-rotation';
-import { useGesture } from '@use-gesture/react';
+import { useZoomPan } from '../hooks/useZoomPan';
 
 // Extracted hooks and components
 import { usePTZControl, useAlarmControl, useModeControl, useMonitorNavigation } from './hooks';
 import { MonitorSettingsDialog } from '../components/monitor-detail/MonitorSettingsDialog';
 import { MonitorControlsCard } from '../components/monitor-detail/MonitorControlsCard';
+import { ZoomControls } from '../components/ui/ZoomControls';
 
 export default function MonitorDetail() {
   const { id } = useParams<{ id: string }>();
@@ -50,12 +51,10 @@ export default function MonitorDetail() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
 
-  // Pinch-to-zoom state
-  const [pinchScale, setPinchScale] = useState(1);
-  const [isPinching, setIsPinching] = useState(false);
-
   // Navigation state
   const referrer = location.state?.from as string | undefined;
+  const canGoBack = referrer || window.history.length > 1;
+  const goBack = () => referrer ? navigate(referrer) : canGoBack ? navigate(-1) : navigate('/monitors');
 
   // Profile and settings
   const { currentProfile, settings } = useCurrentProfile();
@@ -90,6 +89,15 @@ export default function MonitorDetail() {
   const { isSliding, enabledMonitors, onSwipeLeft, onSwipeRight } = useMonitorNavigation({
     currentMonitorId: id,
     cycleSeconds: settings.monitorDetailCycleSeconds,
+  });
+
+  // Pinch-to-zoom and pan (zooms around focal point, pan when zoomed, swipe when not)
+  const zoomPan = useZoomPan({
+    minScale: 0.5,
+    maxScale: 4,
+    swipeEnabled: !!enabledMonitors && enabledMonitors.length > 1,
+    onSwipeLeft,
+    onSwipeRight,
   });
 
   const { handlePTZCommand } = usePTZControl({
@@ -154,47 +162,10 @@ export default function MonitorDetail() {
     return `${width}x${height}`;
   }, [monitor?.Monitor.Height, monitor?.Monitor.Orientation, monitor?.Monitor.Width]);
 
-  // Combined gesture handler for swipe navigation + pinch-to-zoom
-  const bindGestures = useGesture(
-    {
-      onDrag: ({ movement: [mx], direction: [xDir], last, velocity: [vx] }) => {
-        if (pinchScale > 1.05) return; // Disable swipe while zoomed in
-        if (!enabledMonitors || enabledMonitors.length <= 1) return;
-
-        if (last) {
-          const didSwipe = Math.abs(mx) > 80 || vx > 0.5;
-          if (didSwipe) {
-            if (xDir < 0) onSwipeLeft();
-            else if (xDir > 0) onSwipeRight();
-          }
-        }
-      },
-      onPinch: ({ offset: [d], first, last }) => {
-        if (first) setIsPinching(true);
-        const newScale = Math.max(0.5, Math.min(4, d));
-        setPinchScale(newScale);
-        if (last) {
-          setIsPinching(false);
-          // Snap back to 1 if close enough
-          if (newScale < 1.05) setPinchScale(1);
-        }
-      },
-    },
-    {
-      drag: { axis: 'x', filterTaps: true, pointer: { touch: true } },
-      pinch: { scaleBounds: { min: 0.5, max: 4 }, rubberband: true },
-    }
-  );
-
-  const resetPinchZoom = useCallback(() => {
-    setPinchScale(1);
-  }, []);
-
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev);
-    // Reset zoom when entering/exiting fullscreen
-    setPinchScale(1);
-  }, []);
+    zoomPan.reset();
+  }, [zoomPan]);
 
   // Settings handlers
   const handleFeedFitChange = (value: string) => {
@@ -239,7 +210,7 @@ export default function MonitorDetail() {
           <AlertTriangle className="h-5 w-5" />
           {t('monitor_detail.load_error')}
         </div>
-        <Button onClick={() => (referrer ? navigate(referrer) : navigate(-1))} className="mt-4">
+        <Button onClick={goBack} className="mt-4">
           {t('common.go_back')}
         </Button>
       </div>
@@ -258,7 +229,7 @@ export default function MonitorDetail() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => (referrer ? navigate(referrer) : navigate(-1))}
+            onClick={goBack}
             aria-label={t('common.go_back')}
             className="h-8 w-8"
           >
@@ -362,9 +333,10 @@ export default function MonitorDetail() {
           : 'p-2 sm:p-3 md:p-4 bg-muted/10'
       )}>
         <Card
-          {...bindGestures()}
+          ref={zoomPan.ref}
+          {...zoomPan.bind()}
           className={cn(
-            'relative bg-black overflow-hidden border-0 touch-pan-y transition-shadow',
+            'relative bg-black overflow-hidden border-0 touch-none transition-shadow',
             isFullscreen
               ? 'w-full h-full rounded-none shadow-none'
               : 'w-full max-w-5xl aspect-video shadow-2xl',
@@ -372,15 +344,7 @@ export default function MonitorDetail() {
             alarmBorderClass
           )}
         >
-          <div
-            style={{
-              transform: `scale(${pinchScale})`,
-              transformOrigin: 'center center',
-              transition: isPinching ? 'none' : 'transform 0.2s ease-out',
-              width: '100%',
-              height: '100%',
-            }}
-          >
+          <div ref={zoomPan.innerRef}>
             <VideoPlayer
               monitor={monitor.Monitor}
               profile={currentProfile}
@@ -398,21 +362,21 @@ export default function MonitorDetail() {
               visible={showZones && !isZonesLoading}
             />
           </div>
-          {/* Zoom reset indicator */}
-          {pinchScale > 1.05 && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className={cn(
-                'absolute right-2 h-7 text-xs opacity-80 z-10',
-                isFullscreen ? 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]' : 'bottom-2'
-              )}
-              onClick={resetPinchZoom}
-              data-testid="monitor-detail-zoom-reset"
-            >
-              {Math.round(pinchScale * 100)}% — {t('monitor_detail.reset_zoom')}
-            </Button>
-          )}
+          <ZoomControls
+            onZoomIn={zoomPan.zoomIn}
+            onZoomOut={zoomPan.zoomOut}
+            onReset={zoomPan.reset}
+            onPanLeft={zoomPan.panLeft}
+            onPanRight={zoomPan.panRight}
+            onPanUp={zoomPan.panUp}
+            onPanDown={zoomPan.panDown}
+            isZoomed={zoomPan.isZoomed}
+            scale={zoomPan.scale}
+            className={cn(
+              'bottom-2 left-2',
+              isFullscreen && 'bottom-[calc(0.5rem+env(safe-area-inset-bottom))]'
+            )}
+          />
         </Card>
 
         {/* Video Controls Bar - Hidden in fullscreen */}

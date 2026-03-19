@@ -29,6 +29,8 @@ import { useTranslation } from 'react-i18next';
 import { log, LogLevel } from '../lib/logger';
 import { generateEventMarkers, type VideoMarker } from '../lib/video-markers';
 import { useEventFavoritesStore } from '../stores/eventFavorites';
+import { useZoomPan } from '../hooks/useZoomPan';
+import { ZoomControls } from '../components/ui/ZoomControls';
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +40,8 @@ export default function EventDetail() {
 
   // Check if user came from another page (navigation state tracking)
   const referrer = location.state?.from as string | undefined;
+  const canGoBack = referrer || window.history.length > 1;
+  const goBack = () => referrer ? navigate(referrer) : canGoBack ? navigate(-1) : navigate('/events');
   const [useZmsFallback, setUseZmsFallback] = useState(false);
 
   const { data: event, isLoading, error } = useQuery({
@@ -101,6 +105,9 @@ export default function EventDetail() {
     toast.info(t('event_detail.marker_jumped', { text: marker.text }));
   }, [t]);
 
+  // Pinch-to-zoom and pan for event video/image
+  const zoomPan = useZoomPan({ maxScale: 4 });
+
   const orientedResolution = useMemo(() => {
     const width = Number(event?.Event.Width ?? monitorData?.Monitor.Width);
     const height = Number(event?.Event.Height ?? monitorData?.Monitor.Height);
@@ -143,7 +150,7 @@ export default function EventDetail() {
           <AlertTriangle className="h-5 w-5" />
           {t('event_detail.load_error')}
         </div>
-        <Button onClick={() => navigate(-1)} className="mt-4">
+        <Button onClick={goBack} className="mt-4">
           {t('common.go_back')}
         </Button>
       </div>
@@ -184,7 +191,7 @@ export default function EventDetail() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => referrer ? navigate(referrer) : navigate(-1)}
+            onClick={goBack}
             aria-label={t('common.go_back')}
             className="h-8 w-8"
           >
@@ -284,23 +291,41 @@ export default function EventDetail() {
               )
             ) : (
               // MP4 video playback
-              <Card className="overflow-hidden shadow-2xl border-0 ring-1 ring-border/20 bg-black">
+              <Card
+                ref={zoomPan.ref}
+                {...zoomPan.bind()}
+                className="overflow-hidden shadow-2xl border-0 ring-1 ring-border/20 bg-black touch-none relative"
+              >
                 <div className="aspect-video relative">
-                  <VideoPlayer
-                    src={videoUrl}
-                    type="video/mp4"
-                    className="w-full h-full"
-                    poster={posterUrl}
-                    autoplay
-                    markers={videoMarkers}
-                    onMarkerClick={handleMarkerClick}
-                    onError={() => {
-                      log.eventDetail('Video playback failed, falling back to ZMS stream', LogLevel.INFO);
-                      toast.error(t('event_detail.video_playback_failed'));
-                      setUseZmsFallback(true);
-                    }}
-                  />
+                  <div ref={zoomPan.innerRef}>
+                    <VideoPlayer
+                      src={videoUrl}
+                      type="video/mp4"
+                      className="w-full h-full"
+                      poster={posterUrl}
+                      autoplay
+                      markers={videoMarkers}
+                      onMarkerClick={handleMarkerClick}
+                      onError={() => {
+                        log.eventDetail('Video playback failed, falling back to ZMS stream', LogLevel.INFO);
+                        toast.error(t('event_detail.video_playback_failed'));
+                        setUseZmsFallback(true);
+                      }}
+                    />
+                  </div>
                 </div>
+                <ZoomControls
+                  onZoomIn={zoomPan.zoomIn}
+                  onZoomOut={zoomPan.zoomOut}
+                  onReset={zoomPan.reset}
+                  onPanLeft={zoomPan.panLeft}
+                  onPanRight={zoomPan.panRight}
+                  onPanUp={zoomPan.panUp}
+                  onPanDown={zoomPan.panDown}
+                  isZoomed={zoomPan.isZoomed}
+                  scale={zoomPan.scale}
+                  className="bottom-2 left-2"
+                />
               </Card>
             )
           ) : hasJPEGs ? (

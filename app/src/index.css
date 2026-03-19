@@ -16,6 +16,14 @@
   .monitor-slide-in {
     animation: monitor-slide-in 0.45s ease-out;
   }
+  /* Prevent native drag ghost image inside zoom/pan containers */
+  .no-native-drag img,
+  .no-native-drag video,
+  .no-native-drag a {
+    -webkit-user-drag: none;
+    user-drag: none;
+    -webkit-touch-callout: none;
+  }
 }
 
 @keyframes ring {
