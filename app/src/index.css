@@ -350,7 +350,7 @@
 .compact-mode .h-16.w-16 { height: 2.5rem; width: 2.5rem; }
 
 /* --- Notification history images: smaller --- */
-.compact-mode .h-32 { height: 5rem; }
+.compact-mode [data-testid="notification-history"] .h-32 { height: 5rem; }
 
 /* --- Badge: tighter --- */
 .compact-mode [class*="rounded-full"][class*="bg-destructive"] {
@@ -392,8 +392,9 @@
   transform: translateX(1rem);
 }
 
-/* --- Grid overrides for settings/card grids --- */
-.compact-mode .grid {
+/* --- Grid overrides for settings/card grids (scoped to avoid montage/event grids) --- */
+.compact-mode [data-testid="notification-settings"] .grid,
+.compact-mode [data-testid="events-filter-panel"] .grid {
   gap: 0.5rem;
 }
 
