@@ -6,7 +6,8 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Video as VideoIcon, Zap, Gauge, Leaf, RefreshCw } from 'lucide-react';
+import { Image, Video as VideoIcon, Zap, Gauge, Leaf, RefreshCw, ChevronDown } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { Switch } from '../components/ui/switch';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -70,7 +71,7 @@ function getTimeExample(preset: TimeFormatPreset, custom: string): string {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+    <h2 className="text-sm font-semibold text-primary uppercase tracking-wide mb-2">
       {label}
     </h2>
   );
@@ -116,6 +117,7 @@ export default function Settings() {
   const [certInfo, setCertInfo] = useState<CertInfo | null>(null);
   const [certIsChanged, setCertIsChanged] = useState(false);
   const [reverifying, setReverifying] = useState(false);
+  const [protocolsExpanded, setProtocolsExpanded] = useState(false);
 
   const customDatePreview = validateFormatString(customDateDraft);
   const customTimePreview = validateFormatString(customTimeDraft);
@@ -357,24 +359,10 @@ export default function Settings() {
           </SettingsCard>
         </section>
 
-        {/* ── Section 2: Streaming & Playback ── */}
+        {/* ── Section 2: Live Streaming ── */}
         <section>
-          <SectionHeader label={t('settings.section_streaming', 'Streaming & Playback')} />
+          <SectionHeader label={t('settings.section_live_streaming', 'Live Streaming')} />
           <SettingsCard>
-            {/* Event Autoplay */}
-            <SettingsRow>
-              <RowLabel
-                label={t('settings.event_autoplay')}
-                desc={t('settings.event_autoplay_desc')}
-              />
-              <Switch
-                id="event-autoplay"
-                checked={settings.eventVideoAutoplay}
-                onCheckedChange={(checked) => update('eventVideoAutoplay', checked)}
-                data-testid="settings-event-autoplay-switch"
-              />
-            </SettingsRow>
-
             {/* Bandwidth Mode */}
             <SettingsRow>
               <RowLabel
@@ -462,28 +450,37 @@ export default function Settings() {
               </div>
             </SettingsRow>
 
-            {/* Go2RTC protocols (collapsible) */}
+            {/* Go2RTC protocols (collapsible with chevron) */}
             {settings.streamingMethod === 'auto' && (
-              <div className="px-4 py-3 bg-muted/40 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">{t('settings.webrtc_protocols')}</p>
-                <div className="space-y-2">
-                  {PROTOCOLS.map(({ id, label, descKey }) => (
-                    <div key={id} className="flex items-start gap-3">
-                      <Checkbox
-                        id={`protocol-${id}`}
-                        checked={settings.webrtcProtocols?.includes(id) ?? true}
-                        onCheckedChange={(checked) => handleProtocolChange(id, checked === true)}
-                        data-testid={`protocol-${id}-checkbox`}
-                      />
-                      <div>
-                        <Label htmlFor={`protocol-${id}`} className="text-sm font-medium cursor-pointer">
-                          {label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">{t(descKey)}</p>
+              <div className="px-4 py-2 bg-muted/40">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground w-full"
+                  onClick={() => setProtocolsExpanded(!protocolsExpanded)}
+                >
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", !protocolsExpanded && "-rotate-90")} />
+                  {t('settings.webrtc_protocols')}
+                </button>
+                {protocolsExpanded && (
+                  <div className="space-y-2 mt-2">
+                    {PROTOCOLS.map(({ id, label, descKey }) => (
+                      <div key={id} className="flex items-start gap-3">
+                        <Checkbox
+                          id={`protocol-${id}`}
+                          checked={settings.webrtcProtocols?.includes(id) ?? true}
+                          onCheckedChange={(checked) => handleProtocolChange(id, checked === true)}
+                          data-testid={`protocol-${id}-checkbox`}
+                        />
+                        <div>
+                          <Label htmlFor={`protocol-${id}`} className="text-sm font-medium cursor-pointer">
+                            {label}
+                          </Label>
+                          <p className="text-xs text-muted-foreground">{t(descKey)}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -579,6 +576,27 @@ export default function Settings() {
               </div>
             </div>
 
+          </SettingsCard>
+        </section>
+
+        {/* ── Section 3: Playback ── */}
+        <section>
+          <SectionHeader label={t('settings.section_playback', 'Playback')} />
+          <SettingsCard>
+            {/* Event Autoplay */}
+            <SettingsRow>
+              <RowLabel
+                label={t('settings.event_autoplay')}
+                desc={t('settings.event_autoplay_desc')}
+              />
+              <Switch
+                id="event-autoplay"
+                checked={settings.eventVideoAutoplay}
+                onCheckedChange={(checked) => update('eventVideoAutoplay', checked)}
+                data-testid="settings-event-autoplay-switch"
+              />
+            </SettingsRow>
+
             {/* Events Per Page */}
             <div className="px-4 py-3 space-y-2">
               <RowLabel
@@ -653,7 +671,7 @@ export default function Settings() {
           </SettingsCard>
         </section>
 
-        {/* ── Section 3: Advanced ── */}
+        {/* ── Section 4: Advanced ── */}
         <section>
           <SectionHeader label={t('settings.section_advanced', 'Advanced')} />
           <SettingsCard>
