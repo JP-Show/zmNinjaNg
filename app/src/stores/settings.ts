@@ -111,14 +111,9 @@ interface SettingsState {
   saveEventMontageLayout: (profileId: string, layout: Layouts) => void;
 }
 
-// Determine default display mode based on device type
+// Compact is the default for all devices
 const getDefaultDisplayMode = (): DisplayMode => {
-  // Check if window is available (client-side)
-  if (typeof window !== 'undefined') {
-    // Use mobile breakpoint (768px = md breakpoint in Tailwind)
-    return window.innerWidth < 768 ? 'compact' : 'normal';
-  }
-  return 'normal';
+  return 'compact';
 };
 
 const getDefaultLogLevel = (): LogLevel => (
