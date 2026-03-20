@@ -657,8 +657,8 @@ export default function Settings() {
         <section>
           <SectionHeader label={t('settings.section_advanced', 'Advanced')} />
           <SettingsCard>
-            {/* Self-signed certs */}
-            <SettingsRow>
+            {/* Self-signed certs — only relevant for HTTPS */}
+            {currentProfile?.portalUrl?.startsWith('https') && (<><SettingsRow>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium">{t('settings.allow_self_signed_certs')}</div>
                 <div className="text-xs text-muted-foreground">{t('settings.allow_self_signed_certs_desc')}</div>
@@ -710,6 +710,7 @@ export default function Settings() {
                 )}
               </div>
             )}
+            </>)}
 
             {/* Log Redaction */}
             <SettingsRow>
