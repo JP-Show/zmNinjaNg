@@ -204,23 +204,23 @@ function MontageMonitorComponent({
           </span>
         </div>
 
-        {/* Pin button in header — edit mode only */}
+        {/* Pin button in header — edit mode only, large touch target */}
         {isEditing && !isFullscreen && onPinToggle && (
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
+            type="button"
             className={cn(
-              "h-6 w-6 shrink-0",
+              "shrink-0 p-2 -m-1 rounded touch-manipulation",
               isPinned
-                ? "text-blue-400 hover:text-blue-300"
+                ? "text-blue-400"
                 : "text-muted-foreground hover:text-foreground"
             )}
+            onPointerDown={(e) => { e.stopPropagation(); }}
             onClick={(e) => { e.stopPropagation(); onPinToggle(); }}
             title={isPinned ? t('montage.unpin_monitor') : t('montage.pin_monitor')}
             data-testid={`montage-pin-${monitor.Id}`}
           >
-            <Pin className={cn("h-3.5 w-3.5", isPinned && "fill-current")} />
-          </Button>
+            <Pin className={cn("h-4 w-4", isPinned && "fill-current")} />
+          </button>
         )}
 
         {/* Action buttons */}
