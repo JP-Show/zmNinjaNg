@@ -48,9 +48,13 @@ export default function Timeline() {
     clearFilters, activeFilterCount,
   } = useTimelineFilters();
 
-  // Default to last 24h if no persisted dates
-  const startDate = startDateInput || format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm");
-  const endDate = endDateInput || format(new Date(), "yyyy-MM-dd'T'HH:mm");
+  // Stable default dates — computed once, not every render
+  const defaultDates = useRef({
+    start: format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
+    end: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+  });
+  const startDate = startDateInput || defaultDates.current.start;
+  const endDate = endDateInput || defaultDates.current.end;
 
   // Fetch monitors
   const { data: monitorsData } = useQuery({
@@ -199,43 +203,38 @@ export default function Timeline() {
       },
     };
 
-    // Create or update timeline
-    if (!timelineInstance.current) {
-      timelineInstance.current = new VisTimeline(timelineRef.current, items, groups, options);
-
-      // Handle event click
-      timelineInstance.current.on('select', (properties) => {
-        if (properties.items && properties.items.length > 0) {
-          const eventId = properties.items[0];
-          navigate(`/events/${eventId}`);
-        }
-      });
-    } else {
-      timelineInstance.current.setItems(items);
-      timelineInstance.current.setGroups(groups);
-      // Fit the visible window to the new date range so events aren't off-screen
-      timelineInstance.current.setWindow(
-        new Date(startDate),
-        new Date(endDate),
-        { animation: { duration: 300, easingFunction: 'easeInOutQuad' } }
-      );
+    // Destroy previous instance and recreate — vis-timeline doesn't reliably
+    // update when items + window change simultaneously
+    if (timelineInstance.current) {
+      timelineInstance.current.destroy();
+      timelineInstance.current = null;
     }
 
-    // Cleanup
-    return () => {
-      // Don't destroy the instance on every render, only when component unmounts
-    };
-  }, [data, enabledMonitors, navigate, startDate, endDate]);
+    timelineInstance.current = new VisTimeline(timelineRef.current, items, groups, options);
 
-  // Cleanup on unmount
-  useEffect(() => {
+    // Handle event click
+    timelineInstance.current.on('select', (properties) => {
+      if (properties.items && properties.items.length > 0) {
+        const eventId = properties.items[0];
+        navigate(`/events/${eventId}`);
+      }
+    });
+
+    // Set visible window to match the filter date range
+    timelineInstance.current.setWindow(
+      new Date(startDate),
+      new Date(endDate)
+    );
+
     return () => {
       if (timelineInstance.current) {
         timelineInstance.current.destroy();
         timelineInstance.current = null;
       }
     };
-  }, []);
+  }, [data, enabledMonitors, navigate, startDate, endDate]);
+
+  // Note: cleanup on unmount is handled by the effect above (its return fn)
 
   if (error) {
     return (
