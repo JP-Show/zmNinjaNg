@@ -172,10 +172,14 @@ export default function Timeline() {
       })
     );
 
-    // Timeline options
+    // Timeline options — set start/end so vis-timeline opens at the filter range
+    const windowStart = new Date(startDate);
+    const windowEnd = new Date(endDate);
     const options = {
       width: '100%',
       height: '600px',
+      start: windowStart,
+      end: windowEnd,
       margin: {
         item: {
           horizontal: 10,
@@ -190,7 +194,7 @@ export default function Timeline() {
       showMajorLabels: true,
       showMinorLabels: true,
       zoomMin: TIMELINE.zoomMin, // 1 minute
-      zoomMax: TIMELINE.zoomMax, // 1 week
+      zoomMax: 1000 * 60 * 60 * 24 * 90, // 90 days — supports month+ ranges
       moveable: true,
       zoomable: true,
       selectable: true,
@@ -220,11 +224,7 @@ export default function Timeline() {
       }
     });
 
-    // Set visible window to match the filter date range
-    timelineInstance.current.setWindow(
-      new Date(startDate),
-      new Date(endDate)
-    );
+
 
     return () => {
       if (timelineInstance.current) {
