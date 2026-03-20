@@ -261,7 +261,7 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
         )}
       </div>
 
-      <div className={cn("flex-1 overflow-y-auto", isCompact ? "px-2 py-1" : "px-3 py-2")}>
+      <div className={cn("flex-1 overflow-y-auto overflow-x-hidden", isCompact ? "px-2 py-1" : "px-3 py-2")}>
         {/* Reorder toggle — only when expanded */}
         {!isCollapsed && (
           <div className="flex justify-end gap-1 mb-1 px-1">
@@ -437,9 +437,9 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
             {profileSettings?.insomnia ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
         )}
-        <p className={cn("text-[10px] text-muted-foreground/50 pt-1", isCollapsed ? "text-center" : "px-1")}>
+        <span className={cn("block text-[10px] text-muted-foreground/50 pt-1", isCollapsed ? "text-center" : "px-1")}>
           v{getAppVersion()}
-        </p>
+        </span>
       </div>
       </div>
     </div>
