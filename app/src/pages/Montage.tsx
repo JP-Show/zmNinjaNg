@@ -339,10 +339,7 @@ export default function Montage() {
             data-testid="montage-grid"
           >
             <WrappedGridLayout
-              layout={layout.map((item) => ({
-                ...item,
-                static: isMonitorPinned(item.i),
-              }))}
+              layout={layout}
               cols={INTERNAL_COLS}
               rowHeight={GRID_LAYOUT.montageRowHeight}
               margin={[0, 0]}

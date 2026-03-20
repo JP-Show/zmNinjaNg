@@ -324,16 +324,34 @@ export function useMontageGrid({
       if (!isEditModeRef.current) return;
       if (!currentProfileRef.current) return;
 
-      // Preserve positions of pinned monitors — RGL may try to move them
       const pinned = pinnedRef.current;
-      const currentLayout = layoutRef.current;
+      if (pinned.size === 0) {
+        // No pins — save as-is
+        saveMontageLayout(currentProfileRef.current.id, {
+          ...settingsRef.current.montageLayouts,
+          lg: nextLayout,
+        });
+        return;
+      }
+
+      // Restore pinned items to their snapshotted positions
+      const positions = pinnedPositionsRef.current;
+      let needsCorrection = false;
       const merged = nextLayout.map((item) => {
         if (pinned.has(item.i)) {
-          const orig = currentLayout.find((l) => l.i === item.i);
-          return orig ? { ...item, x: orig.x, y: orig.y, w: orig.w, h: orig.h } : item;
+          const orig = positions.get(item.i);
+          if (orig && (item.x !== orig.x || item.y !== orig.y || item.w !== orig.w || item.h !== orig.h)) {
+            needsCorrection = true;
+            return { ...item, ...orig };
+          }
         }
         return item;
       });
+
+      // Push corrected layout back into state so RGL snaps pinned items back
+      if (needsCorrection) {
+        setLayout(merged);
+      }
 
       saveMontageLayout(currentProfileRef.current.id, {
         ...settingsRef.current.montageLayouts,
@@ -371,15 +389,24 @@ export function useMontageGrid({
   );
 
   // Pinned monitors: tracked separately to avoid triggering RGL relayout.
-  // We don't use RGL's `static` property because toggling it causes reflow.
+  // pinnedPositions stores the exact position at pin time so we can restore it.
   const pinnedRef = useRef<Set<string>>(new Set());
+  const pinnedPositionsRef = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map());
   const [pinnedVersion, setPinnedVersion] = useState(0);
 
   const togglePinMonitor = useCallback((monitorId: string) => {
     const pinned = pinnedRef.current;
-    if (pinned.has(monitorId)) pinned.delete(monitorId);
-    else pinned.add(monitorId);
-    setPinnedVersion((v) => v + 1); // trigger re-render
+    const positions = pinnedPositionsRef.current;
+    if (pinned.has(monitorId)) {
+      pinned.delete(monitorId);
+      positions.delete(monitorId);
+    } else {
+      pinned.add(monitorId);
+      // Snapshot current position
+      const item = layoutRef.current.find((l) => l.i === monitorId);
+      if (item) positions.set(monitorId, { x: item.x, y: item.y, w: item.w, h: item.h });
+    }
+    setPinnedVersion((v) => v + 1);
   }, []);
 
   const isMonitorPinned = useCallback((monitorId: string) => {
