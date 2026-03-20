@@ -116,6 +116,7 @@ interface UseMontageGridReturn {
   handleWidthChange: (width: number) => void;
   setGridCols: React.Dispatch<React.SetStateAction<number>>;
   togglePinMonitor: (monitorId: string) => void;
+  isMonitorPinned: (monitorId: string) => boolean;
 }
 
 export function useMontageGrid({
@@ -132,6 +133,8 @@ export function useMontageGrid({
   const [displayCols, setDisplayCols] = useState<number>(settings.montageGridCols);
   const [isScreenTooSmall, setIsScreenTooSmall] = useState(false);
   const [layout, setLayout] = useState<Layout[]>([]);
+  const layoutRef = useRef<Layout[]>([]);
+  layoutRef.current = layout;
   const [hasWidth, setHasWidth] = useState(false);
   // Track whether initial layout has been built (prevent re-running on monitor refetch)
   const initializedRef = useRef(false);
@@ -318,18 +321,23 @@ export function useMontageGrid({
 
   const handleLayoutChange = useCallback(
     (nextLayout: Layout[]) => {
-      // Skip the layout change triggered by a pin toggle — positions haven't moved
-      if (skipNextLayoutChangeRef.current) {
-        skipNextLayoutChangeRef.current = false;
-        return;
-      }
-      // Only persist when user is actively editing (drag/resize).
       if (!isEditModeRef.current) return;
       if (!currentProfileRef.current) return;
 
+      // Preserve positions of pinned monitors — RGL may try to move them
+      const pinned = pinnedRef.current;
+      const currentLayout = layoutRef.current;
+      const merged = nextLayout.map((item) => {
+        if (pinned.has(item.i)) {
+          const orig = currentLayout.find((l) => l.i === item.i);
+          return orig ? { ...item, x: orig.x, y: orig.y, w: orig.w, h: orig.h } : item;
+        }
+        return item;
+      });
+
       saveMontageLayout(currentProfileRef.current.id, {
         ...settingsRef.current.montageLayouts,
-        lg: nextLayout,
+        lg: merged,
       });
     },
     [saveMontageLayout]
@@ -362,16 +370,21 @@ export function useMontageGrid({
     [saveMontageLayout]
   );
 
-  const skipNextLayoutChangeRef = useRef(false);
+  // Pinned monitors: tracked separately to avoid triggering RGL relayout.
+  // We don't use RGL's `static` property because toggling it causes reflow.
+  const pinnedRef = useRef<Set<string>>(new Set());
+  const [pinnedVersion, setPinnedVersion] = useState(0);
 
   const togglePinMonitor = useCallback((monitorId: string) => {
-    skipNextLayoutChangeRef.current = true;
-    setLayout((prev) =>
-      prev.map((item) =>
-        item.i === monitorId ? { ...item, static: !item.static } : item
-      )
-    );
+    const pinned = pinnedRef.current;
+    if (pinned.has(monitorId)) pinned.delete(monitorId);
+    else pinned.add(monitorId);
+    setPinnedVersion((v) => v + 1); // trigger re-render
   }, []);
+
+  const isMonitorPinned = useCallback((monitorId: string) => {
+    return pinnedRef.current.has(monitorId);
+  }, [pinnedVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     layout,
@@ -387,5 +400,6 @@ export function useMontageGrid({
     handleWidthChange,
     setGridCols: setDisplayCols,
     togglePinMonitor,
+    isMonitorPinned,
   };
 }

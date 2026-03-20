@@ -115,6 +115,7 @@ export default function Montage() {
     handleResizeStop,
     handleWidthChange,
     togglePinMonitor,
+    isMonitorPinned,
   } = useMontageGrid({
     monitors,
     currentProfile,
@@ -360,7 +361,7 @@ export default function Montage() {
                     navigate={navigate}
                     isFullscreen={isFullscreen}
                     isEditing={isEditMode}
-                    isPinned={layout.find((item) => item.i === Monitor.Id)?.static || false}
+                    isPinned={isMonitorPinned(Monitor.Id)}
                     onPinToggle={() => togglePinMonitor(Monitor.Id)}
                     objectFit={settings.montageFeedFit}
                     showOverlay={showMonitorLabels}
