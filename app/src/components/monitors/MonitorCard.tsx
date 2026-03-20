@@ -205,8 +205,8 @@ function MonitorCardComponent({
               {t('sidebar.events')}
               {eventCount !== undefined && eventCount > 0 && (
                 <Badge
-                  variant="destructive"
-                  className="ml-1 px-1 py-0 text-[10px] h-4 min-w-4"
+                  variant="secondary"
+                  className="ml-1 px-1 py-0 text-[10px] h-4 min-w-4 bg-blue-500/15 text-blue-400 border-blue-500/20"
                 >
                   {formatEventCount(eventCount)}
                 </Badge>
