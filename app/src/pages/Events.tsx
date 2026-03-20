@@ -348,7 +348,6 @@ export default function Events() {
                 {viewMode === 'list' ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
               </Button>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground hidden md:inline">{t('events.thumbnail_fit')}</span>
                 <Select value={normalizedThumbnailFit} onValueChange={handleThumbnailFitChange}>
                   <SelectTrigger className="h-8 sm:h-9 w-[100px]" data-testid="events-thumbnail-fit-select">
                     <SelectValue placeholder={t('events.thumbnail_fit')} />
