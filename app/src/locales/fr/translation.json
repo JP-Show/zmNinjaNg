@@ -786,7 +786,7 @@
     "load_error": "Erreur de chargement des événements",
     "grid_layout": "Mise en page de la grille",
     "screen_too_small": "La largeur de l'écran est trop petite pour autant de colonnes",
-    "columns": "{{count}} Colonnes",
+    "columns": "{{count}} cols",
     "custom": "Personnalisé",
     "filters": "Filtres",
     "active_filters": "Filtres actifs",

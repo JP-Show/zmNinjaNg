@@ -350,21 +350,15 @@ export default function Events() {
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground hidden md:inline">{t('events.thumbnail_fit')}</span>
                 <Select value={normalizedThumbnailFit} onValueChange={handleThumbnailFitChange}>
-                  <SelectTrigger className="h-8 sm:h-9 w-[160px]" data-testid="events-thumbnail-fit-select">
+                  <SelectTrigger className="h-8 sm:h-9 w-[100px]" data-testid="events-thumbnail-fit-select">
                     <SelectValue placeholder={t('events.thumbnail_fit')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="contain" data-testid="events-thumbnail-fit-contain">
-                      {t('events.fit_contain')}
+                      {t('montage.fit_fit')}
                     </SelectItem>
                     <SelectItem value="cover" data-testid="events-thumbnail-fit-cover">
-                      {t('events.fit_cover')}
-                    </SelectItem>
-                    <SelectItem value="none" data-testid="events-thumbnail-fit-none">
-                      {t('events.fit_none')}
-                    </SelectItem>
-                    <SelectItem value="scale-down" data-testid="events-thumbnail-fit-scale-down">
-                      {t('events.fit_scale_down')}
+                      {t('montage.fit_crop')}
                     </SelectItem>
                   </SelectContent>
                 </Select>

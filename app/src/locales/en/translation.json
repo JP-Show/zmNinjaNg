@@ -783,7 +783,7 @@
     "load_error": "Error loading events",
     "grid_layout": "Grid Layout",
     "screen_too_small": "Screen width is too small for that many columns",
-    "columns": "{{count}} Columns",
+    "columns": "{{count}} cols",
     "custom": "Custom",
     "filters": "Filters",
     "active_filters": "Active Filters",

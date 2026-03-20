@@ -786,7 +786,7 @@
     "load_error": "Fehler beim Laden der Ereignisse",
     "grid_layout": "Rasterlayout",
     "screen_too_small": "Bildschirmbreite ist für so viele Spalten zu klein",
-    "columns": "{{count}} Spalten",
+    "columns": "{{count}} Sp.",
     "custom": "Benutzerdefiniert",
     "filters": "Filter",
     "active_filters": "Aktive Filter",

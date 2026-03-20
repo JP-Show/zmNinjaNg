@@ -786,7 +786,7 @@
     "load_error": "Error al cargar eventos",
     "grid_layout": "Diseño de Cuadrícula",
     "screen_too_small": "El ancho de la pantalla es demasiado pequeño para tantas columnas",
-    "columns": "{{count}} Columnas",
+    "columns": "{{count}} cols",
     "custom": "Personalizado",
     "filters": "Filtros",
     "active_filters": "Filtros Activos",
