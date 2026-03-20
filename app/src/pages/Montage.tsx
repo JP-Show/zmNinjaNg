@@ -339,11 +339,7 @@ export default function Montage() {
             data-testid="montage-grid"
           >
             <WrappedGridLayout
-              layout={layout.map((item) => ({
-                ...item,
-                isDraggable: isEditMode && !isMonitorPinned(item.i),
-                isResizable: isEditMode && !isMonitorPinned(item.i),
-              }))}
+              layout={layout}
               cols={INTERNAL_COLS}
               rowHeight={GRID_LAYOUT.montageRowHeight}
               margin={[0, 0]}
@@ -352,11 +348,12 @@ export default function Montage() {
               preventCollision={false}
               isResizable={isEditMode}
               isDraggable={isEditMode}
+              draggableCancel=".pin-locked"
               onLayoutChange={handleLayoutChange}
               onResizeStop={handleResizeStop}
             >
               {monitors.map(({ Monitor, Monitor_Status }) => (
-                <div key={Monitor.Id} className="relative">
+                <div key={Monitor.Id} className={cn("relative", isMonitorPinned(Monitor.Id) && "pin-locked")}>
                   <MontageMonitor
                     monitor={Monitor}
                     status={Monitor_Status}
