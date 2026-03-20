@@ -168,7 +168,7 @@ function MontageMonitorComponent({
 
   return (
     <Card className={cn(
-      "h-full overflow-hidden flex flex-col rounded-none",
+      "h-full overflow-hidden flex flex-col rounded-none relative",
       isFullscreen
         ? "border-none shadow-none bg-black m-0 p-0"
         : "border-0 shadow-none bg-card",
@@ -203,25 +203,6 @@ function MontageMonitorComponent({
             {monitor.Name}
           </span>
         </div>
-
-        {/* Pin button in header — edit mode only, large touch target */}
-        {isEditing && !isFullscreen && onPinToggle && (
-          <button
-            type="button"
-            className={cn(
-              "shrink-0 p-2 -m-1 rounded touch-manipulation",
-              isPinned
-                ? "text-blue-400"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onPointerDown={(e) => { e.stopPropagation(); }}
-            onClick={(e) => { e.stopPropagation(); onPinToggle(); }}
-            title={isPinned ? t('montage.unpin_monitor') : t('montage.pin_monitor')}
-            data-testid={`montage-pin-${monitor.Id}`}
-          >
-            <Pin className={cn("h-4 w-4", isPinned && "fill-current")} />
-          </button>
-        )}
 
         {/* Action buttons */}
         <div className="flex items-center gap-0.5">
@@ -322,6 +303,27 @@ function MontageMonitorComponent({
           onLoad={() => setImageLoaded(true)}
         />
       </div>
+
+      {/* Pin button — bottom-left corner, outside drag handle, edit mode only */}
+      {isEditing && !isFullscreen && onPinToggle && (
+        <button
+          type="button"
+          className={cn(
+            "absolute bottom-1 left-1 z-30 rounded-full p-1.5 touch-manipulation transition-all",
+            isPinned
+              ? "bg-blue-500 text-white shadow-md"
+              : "bg-black/50 text-white/70 hover:bg-black/70 hover:text-white"
+          )}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onPinToggle(); }}
+          title={isPinned ? t('montage.unpin_monitor') : t('montage.pin_monitor')}
+          data-testid={`montage-pin-${monitor.Id}`}
+        >
+          <Pin className={cn("h-4 w-4", isPinned && "fill-current")} />
+        </button>
+      )}
     </Card>
   );
 }
