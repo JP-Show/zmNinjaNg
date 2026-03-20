@@ -400,7 +400,7 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
           })}
         </nav>
 
-      <div className={cn("border-t bg-card/50 backdrop-blur-sm transition-all duration-300 mt-2", isCollapsed ? "p-2 space-y-3" : isCompact ? "px-2 py-1.5 space-y-0.5" : "px-3 py-2 space-y-1.5")}>
+      <div className={cn("border-t bg-card/50 backdrop-blur-sm transition-all duration-300 mt-4", isCollapsed ? "p-2 space-y-3" : isCompact ? "px-2 py-2 space-y-1" : "px-3 py-2 space-y-1.5")}>
         {!isCollapsed ? (
           <>
             <div className={isCompact ? "space-y-0.5" : "space-y-1"}>
