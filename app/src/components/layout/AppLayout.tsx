@@ -437,7 +437,7 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
             {profileSettings?.insomnia ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
         )}
-        <span className={cn("block text-[10px] text-muted-foreground/50 pt-1", isCollapsed ? "text-center" : "px-1")}>
+        <span className={cn("block text-[10px] pt-1 opacity-40", isCollapsed ? "text-center" : "px-1")} style={{ fontSize: '10px' }}>
           v{getAppVersion()}
         </span>
       </div>
