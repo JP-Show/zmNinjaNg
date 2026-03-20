@@ -133,8 +133,6 @@ export function useMontageGrid({
   const [displayCols, setDisplayCols] = useState<number>(settings.montageGridCols);
   const [isScreenTooSmall, setIsScreenTooSmall] = useState(false);
   const [layout, setLayout] = useState<Layout[]>([]);
-  const layoutRef = useRef<Layout[]>([]);
-  layoutRef.current = layout;
   const [hasWidth, setHasWidth] = useState(false);
   // Track whether initial layout has been built (prevent re-running on monitor refetch)
   const initializedRef = useRef(false);
@@ -321,41 +319,13 @@ export function useMontageGrid({
 
   const handleLayoutChange = useCallback(
     (nextLayout: Layout[]) => {
+      // Only persist when user is actively editing (drag/resize).
       if (!isEditModeRef.current) return;
       if (!currentProfileRef.current) return;
 
-      const pinned = pinnedRef.current;
-      if (pinned.size === 0) {
-        // No pins — save as-is
-        saveMontageLayout(currentProfileRef.current.id, {
-          ...settingsRef.current.montageLayouts,
-          lg: nextLayout,
-        });
-        return;
-      }
-
-      // Restore pinned items to their snapshotted positions
-      const positions = pinnedPositionsRef.current;
-      let needsCorrection = false;
-      const merged = nextLayout.map((item) => {
-        if (pinned.has(item.i)) {
-          const orig = positions.get(item.i);
-          if (orig && (item.x !== orig.x || item.y !== orig.y || item.w !== orig.w || item.h !== orig.h)) {
-            needsCorrection = true;
-            return { ...item, ...orig };
-          }
-        }
-        return item;
-      });
-
-      // Push corrected layout back into state so RGL snaps pinned items back
-      if (needsCorrection) {
-        setLayout(merged);
-      }
-
       saveMontageLayout(currentProfileRef.current.id, {
         ...settingsRef.current.montageLayouts,
-        lg: merged,
+        lg: nextLayout,
       });
     },
     [saveMontageLayout]
@@ -388,30 +358,22 @@ export function useMontageGrid({
     [saveMontageLayout]
   );
 
-  // Pinned monitors: tracked separately to avoid triggering RGL relayout.
-  // pinnedPositions stores the exact position at pin time so we can restore it.
-  const pinnedRef = useRef<Set<string>>(new Set());
-  const pinnedPositionsRef = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map());
-  const [pinnedVersion, setPinnedVersion] = useState(0);
+  // Pinned monitors: prevents accidental drag/resize of the pinned item.
+  // Uses per-item isDraggable/isResizable on the layout — does NOT use `static`.
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
   const togglePinMonitor = useCallback((monitorId: string) => {
-    const pinned = pinnedRef.current;
-    const positions = pinnedPositionsRef.current;
-    if (pinned.has(monitorId)) {
-      pinned.delete(monitorId);
-      positions.delete(monitorId);
-    } else {
-      pinned.add(monitorId);
-      // Snapshot current position
-      const item = layoutRef.current.find((l) => l.i === monitorId);
-      if (item) positions.set(monitorId, { x: item.x, y: item.y, w: item.w, h: item.h });
-    }
-    setPinnedVersion((v) => v + 1);
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(monitorId)) next.delete(monitorId);
+      else next.add(monitorId);
+      return next;
+    });
   }, []);
 
   const isMonitorPinned = useCallback((monitorId: string) => {
-    return pinnedRef.current.has(monitorId);
-  }, [pinnedVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+    return pinnedIds.has(monitorId);
+  }, [pinnedIds]);
 
   return {
     layout,
