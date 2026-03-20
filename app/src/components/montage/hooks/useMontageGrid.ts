@@ -323,6 +323,8 @@ export function useMontageGrid({
       if (!isEditModeRef.current) return;
       if (!currentProfileRef.current) return;
 
+      console.log('[LAYOUT_CHANGE] fired', JSON.stringify(nextLayout.map(l => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h }))));
+
       saveMontageLayout(currentProfileRef.current.id, {
         ...settingsRef.current.montageLayouts,
         lg: nextLayout,
@@ -363,13 +365,14 @@ export function useMontageGrid({
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
   const togglePinMonitor = useCallback((monitorId: string) => {
+    console.log('[PIN] toggle', monitorId, 'layout before:', JSON.stringify(layout.map(l => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h }))));
     setPinnedIds((prev) => {
       const next = new Set(prev);
       if (next.has(monitorId)) next.delete(monitorId);
       else next.add(monitorId);
       return next;
     });
-  }, []);
+  }, [layout]);
 
   const isMonitorPinned = useCallback((monitorId: string) => {
     return pinnedIds.has(monitorId);
