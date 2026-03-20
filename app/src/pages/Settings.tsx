@@ -158,6 +158,12 @@ export default function Settings() {
   const handleSelfSignedCertsChange = async (checked: boolean) => {
     if (!currentProfile) return;
 
+    // Update the setting immediately so the switch toggles
+    updateSettings(currentProfile.id, {
+      allowSelfSignedCerts: checked,
+      ...(!checked && { trustedCertFingerprint: null }),
+    });
+
     if (checked && Platform.isNative) {
       try {
         const { applySSLTrustSetting, getServerCertFingerprint } = await import('../lib/ssl-trust');
@@ -174,11 +180,6 @@ export default function Settings() {
         log.sslTrust('Failed to fetch cert during enable', LogLevel.ERROR, { error });
       }
     }
-
-    updateSettings(currentProfile.id, {
-      allowSelfSignedCerts: checked,
-      ...(!checked && { trustedCertFingerprint: null }),
-    });
 
     if (!checked) {
       const { applySSLTrustSetting } = await import('../lib/ssl-trust');
