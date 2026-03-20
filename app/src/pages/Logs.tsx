@@ -357,8 +357,7 @@ export default function Logs() {
                                     className="h-8 gap-1"
                                     data-testid="log-component-filter-trigger"
                                 >
-                                    <span className="text-xs text-muted-foreground">{t('logs.component_filter_label')}</span>
-                                    <span className="text-xs font-medium">{selectedLabel}</span>
+                                    <span className="text-xs">{t('logs.component_filter_label')}: {selectedLabel}</span>
                                     <ChevronDown className="h-3 w-3 text-muted-foreground" />
                                 </Button>
                             </PopoverTrigger>
