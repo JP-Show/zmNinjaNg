@@ -15,5 +15,6 @@ events
 timeline
 settings
 notifications
+kiosk
 faq
 ```
