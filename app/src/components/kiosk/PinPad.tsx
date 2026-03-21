@@ -56,6 +56,29 @@ export function PinPad({ mode, onSubmit, onCancel, error, cooldownSeconds }: Pin
 
   const isCooling = cooldownSeconds != null && cooldownSeconds > 0;
 
+  // Handle keyboard input for PIN entry
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isCooling) return;
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDigit(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDelete();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [handleDigit, handleDelete, onCancel, isCooling]);
+
   return (
     <div
       className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm"

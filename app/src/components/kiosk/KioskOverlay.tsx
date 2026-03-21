@@ -23,7 +23,7 @@ interface KioskOverlayProps {
 export function KioskOverlay({ onUnlock }: KioskOverlayProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { isLocked, unlock, recordFailedAttempt, isCoolingDown, cooldownUntil } = useKioskStore();
+  const { isLocked, unlock, recordFailedAttempt, isCoolingDown, cooldownUntil, unlockRequested, clearUnlockRequest } = useKioskStore();
   const [showPinPad, setShowPinPad] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
@@ -88,9 +88,9 @@ export function KioskOverlay({ onUnlock }: KioskOverlayProps) {
     };
   }, [isLocked]);
 
-  // Block keyboard shortcuts while locked
+  // Block keyboard shortcuts while locked (but not when PIN pad is open)
   useEffect(() => {
-    if (!isLocked) return;
+    if (!isLocked || showPinPad) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
@@ -99,7 +99,15 @@ export function KioskOverlay({ onUnlock }: KioskOverlayProps) {
 
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isLocked]);
+  }, [isLocked, showPinPad]);
+
+  // Respond to unlock requests from sidebar/other UI
+  useEffect(() => {
+    if (unlockRequested && isLocked) {
+      clearUnlockRequest();
+      handleUnlockTap();
+    }
+  }, [unlockRequested]);
 
   const handleUnlockTap = useCallback(async () => {
     if (isCoolingDown()) {
@@ -161,16 +169,17 @@ export function KioskOverlay({ onUnlock }: KioskOverlayProps) {
         {/* Unlock button — bottom-right */}
         <button
           onClick={handleUnlockTap}
-          className="absolute bottom-6 right-6 w-11 h-11 rounded-full flex items-center justify-center transition-colors"
+          className="absolute bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
           style={{
-            background: 'rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(4px)',
-            border: '1px solid rgba(255,255,255,0.15)',
+            background: 'rgba(255,255,255,0.25)',
+            backdropFilter: 'blur(8px)',
+            border: '2px solid rgba(255,255,255,0.4)',
+            boxShadow: '0 0 20px rgba(255,255,255,0.15)',
           }}
           title={t('kiosk.unlock_label')}
           data-testid="kiosk-unlock-button"
         >
-          <LockOpen className="h-5 w-5" style={{ color: 'rgba(255,255,255,0.7)' }} />
+          <LockOpen className="h-6 w-6" style={{ color: 'rgba(255,255,255,0.9)' }} />
         </button>
       </div>
 

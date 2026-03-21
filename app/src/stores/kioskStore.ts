@@ -15,9 +15,12 @@ interface KioskState {
   previousInsomniaState: boolean;
   pinAttempts: number;
   cooldownUntil: number | null;
+  unlockRequested: boolean;
 
   lock: (currentInsomniaState: boolean) => void;
   unlock: () => void;
+  requestUnlock: () => void;
+  clearUnlockRequest: () => void;
   recordFailedAttempt: () => void;
   isCoolingDown: () => boolean;
 }
@@ -27,6 +30,7 @@ export const useKioskStore = create<KioskState>()((set, get) => ({
   previousInsomniaState: false,
   pinAttempts: 0,
   cooldownUntil: null,
+  unlockRequested: false,
 
   lock: (currentInsomniaState: boolean) => {
     set({
@@ -34,6 +38,7 @@ export const useKioskStore = create<KioskState>()((set, get) => ({
       previousInsomniaState: currentInsomniaState,
       pinAttempts: 0,
       cooldownUntil: null,
+      unlockRequested: false,
     });
   },
 
@@ -42,7 +47,16 @@ export const useKioskStore = create<KioskState>()((set, get) => ({
       isLocked: false,
       pinAttempts: 0,
       cooldownUntil: null,
+      unlockRequested: false,
     });
+  },
+
+  requestUnlock: () => {
+    set({ unlockRequested: true });
+  },
+
+  clearUnlockRequest: () => {
+    set({ unlockRequested: false });
   },
 
   recordFailedAttempt: () => {

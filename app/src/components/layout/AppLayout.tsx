@@ -40,6 +40,7 @@ import {
   ArrowUpDown,
   Check,
   Lock,
+  LockOpen,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
@@ -160,9 +161,10 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
   };
 
   const {
-    showSetPin, setPinMode, pinError,
+    isLocked: kioskIsLocked, showSetPin, setPinMode, pinError,
     handleLockToggle, handleSetPinSubmit, handleSetPinCancel,
   } = useKioskLock({ onLocked: () => onMobileClose?.() });
+  const requestUnlock = useKioskStore((s) => s.requestUnlock);
 
 
   const defaultNavItems = [
@@ -435,16 +437,18 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
               </Button>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">{t('kiosk.lock_label')}</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {kioskIsLocked ? t('kiosk.unlock_label') : t('kiosk.lock_label')}
+              </span>
               <Button
-                onClick={handleLockToggle}
-                variant="outline"
+                onClick={kioskIsLocked ? requestUnlock : handleLockToggle}
+                variant={kioskIsLocked ? "default" : "outline"}
                 size="icon"
                 className={isCompact ? "h-7 w-7" : "h-8 w-8"}
-                title={t('kiosk.lock_label')}
+                title={kioskIsLocked ? t('kiosk.unlock_label') : t('kiosk.lock_label')}
                 data-testid="sidebar-kiosk-lock"
               >
-                <Lock className="h-4 w-4" />
+                {kioskIsLocked ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
               </Button>
             </div>
           </>
@@ -461,14 +465,14 @@ function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentProps) {
               {profileSettings?.insomnia ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
             </Button>
             <Button
-              onClick={handleLockToggle}
-              variant="outline"
+              onClick={kioskIsLocked ? requestUnlock : handleLockToggle}
+              variant={kioskIsLocked ? "default" : "outline"}
               size="icon"
               className="h-8 w-8"
-              title={t('kiosk.lock_label')}
+              title={kioskIsLocked ? t('kiosk.unlock_label') : t('kiosk.lock_label')}
               data-testid="sidebar-kiosk-lock-collapsed"
             >
-              <Lock className="h-4 w-4" />
+              {kioskIsLocked ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
             </Button>
           </>
         )}
