@@ -679,11 +679,16 @@ update (streams, event counts, etc.) — only interaction is blocked.
   leave the locked view
 - On Android, swallows the hardware back button via ``@capacitor/app``
   listener (dynamic import, native platforms only)
-- Blocks keyboard shortcuts while locked
+- Blocks keyboard shortcuts while locked (but not when the PIN pad is open,
+  so keyboard input reaches the PinPad)
 - Shows a small unlock button (bottom-right, semi-transparent glass style)
 - On tap: tries biometrics first; on failure or cancellation falls through
   to the PIN pad
 - After a successful unlock, calls the ``onUnlock`` prop callback
+- Watches ``unlockRequested`` from the kiosk store. When another UI element
+  (e.g. the sidebar lock button) calls ``requestUnlock()``, KioskOverlay
+  picks it up, clears the flag via ``clearUnlockRequest()``, and starts
+  the unlock flow (biometrics then PIN) automatically.
 
 **Props:**
 
@@ -710,6 +715,12 @@ PinPad
 
 Auto-submits on the 4th digit (100 ms delay to allow the filled dot to
 render). PIN state resets when ``mode`` or ``error`` props change.
+
+**Keyboard support:** PinPad listens for ``keydown`` events on ``window``
+(capture phase). Number keys (0-9) add digits, Backspace deletes the last
+digit, and Escape cancels. All three key types call ``preventDefault`` and
+``stopPropagation`` so they do not bubble to the KioskOverlay keyboard
+blocker. Keyboard input is disabled during cooldown.
 
 **Props:**
 
@@ -753,6 +764,8 @@ call site needs to duplicate it.
 - ``setPinMode`` — current ``PinPadMode`` (``'set'`` or ``'confirm'``)
 - ``pinError`` — error string for the PIN pad (or ``null``)
 - ``handleLockToggle`` — call to initiate locking
+- ``handleChangePin`` — opens the set/confirm flow to replace the existing
+  PIN (without activating kiosk mode afterwards)
 - ``handleSetPinSubmit(pin)`` — pass digits from the PIN pad
 - ``handleSetPinCancel`` — dismiss the PIN setup pad
 
@@ -766,6 +779,7 @@ call site needs to duplicate it.
      setPinMode,
      pinError,
      handleLockToggle,
+     handleChangePin,
      handleSetPinSubmit,
      handleSetPinCancel,
    } = useKioskLock({ onLocked: () => closeSidebar() });
@@ -775,10 +789,18 @@ useBiometricAuth
 
 **Location**: ``src/hooks/useBiometricAuth.ts``
 
-Dynamic import wrapper for ``@aparajita/capacitor-biometric-auth``.
-Exports two async functions (not a React hook) that work on all platforms
-(Touch ID, Face ID, Windows Hello). Falls back gracefully when
-biometrics are unavailable.
+Platform-aware biometric authentication. Exports two async functions (not a
+React hook) that support multiple backends:
+
+- **Tauri (macOS)**: calls a native Rust command that invokes LAContext for
+  Touch ID. The Tauri environment is detected via ``@tauri-apps/api/core``
+  (``isTauri()``).
+- **Capacitor (iOS/Android)**: uses ``@aparajita/capacitor-biometric-auth``
+  (Touch ID, Face ID).
+- **Web**: not supported — falls back gracefully (returns ``false`` /
+  ``{ success: false }``).
+
+Falls back gracefully when biometrics are unavailable on any platform.
 
 - ``checkBiometricAvailability(): Promise<boolean>`` — returns ``true``
   if the device has enrolled biometrics and the plugin is available.
@@ -788,6 +810,21 @@ biometrics are unavailable.
 
 Both functions catch all errors and return a safe value so callers never
 need their own try/catch.
+
+PIN Management in Settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PIN set, change, and clear actions live in the **Settings** page (Advanced
+section). The Settings page renders a "Kiosk PIN" row with Set/Change and
+Clear buttons (``data-testid="settings-kiosk-change-pin"`` and
+``data-testid="settings-kiosk-clear-pin"``).
+
+- **Set**: opens PinPad in ``'set'`` then ``'confirm'`` mode (same flow as
+  first-time setup during lock activation).
+- **Change**: verifies identity first — biometrics if available, otherwise
+  the current PIN — then runs the set/confirm flow to store the new PIN.
+- **Clear**: verifies identity (biometrics or current PIN), then calls
+  ``clearPin()`` from ``lib/kioskPin.ts``.
 
 **Usage:**
 

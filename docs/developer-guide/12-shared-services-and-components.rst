@@ -1352,7 +1352,8 @@ Android, encrypted localStorage on web). Keys: ``kiosk_pin_hash`` and
    await clearPin();
 
 **Used By:** ``hooks/useKioskLock.ts`` (setup flow),
-``components/kiosk/KioskOverlay.tsx`` (unlock verification)
+``components/kiosk/KioskOverlay.tsx`` (unlock verification),
+``pages/Settings.tsx`` (PIN set/change/clear in Advanced section)
 
 --------------
 

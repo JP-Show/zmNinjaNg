@@ -640,14 +640,21 @@ persisted, so the app always starts unlocked after a restart.
   cooldown window
 - ``cooldownUntil`` — Unix timestamp (ms) until which PIN entry is blocked;
   ``null`` when not in cooldown
+- ``unlockRequested`` — flag set by external UI (e.g. sidebar) to ask
+  KioskOverlay to initiate the unlock flow
 
 **Actions:**
 
 - ``lock(currentInsomniaState)`` — activates kiosk mode and captures the
   current insomnia state
 - ``unlock()`` — deactivates kiosk mode and resets attempt counters
+- ``requestUnlock()`` — sets ``unlockRequested`` to ``true`` so that
+  KioskOverlay can pick it up and begin the unlock flow
+- ``clearUnlockRequest()`` — resets ``unlockRequested`` to ``false``
 - ``recordFailedAttempt()`` — increments ``pinAttempts``; after 5 consecutive
-  failures, sets a 30-second ``cooldownUntil``
+  failures, sets a 30-second ``cooldownUntil``. If a previous cooldown has
+  already expired, the counter resets to 0 before incrementing (so the user
+  gets a fresh set of 5 attempts after waiting out a cooldown).
 - ``isCoolingDown()`` — returns ``true`` if the current time is before
   ``cooldownUntil``
 
