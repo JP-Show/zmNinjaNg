@@ -62,6 +62,32 @@ export function KioskOverlay({ onUnlock }: KioskOverlayProps) {
     };
   }, [isLocked]);
 
+  // Block Android hardware back button while locked
+  useEffect(() => {
+    if (!isLocked) return;
+
+    let removeListener: (() => void) | undefined;
+
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { App } = await import('@capacitor/app');
+          const handle = await App.addListener('backButton', () => {
+            // No-op — swallow back button while locked
+          });
+          removeListener = () => handle.remove();
+        }
+      } catch {
+        // Not on native platform or plugin unavailable
+      }
+    })();
+
+    return () => {
+      removeListener?.();
+    };
+  }, [isLocked]);
+
   // Block keyboard shortcuts while locked
   useEffect(() => {
     if (!isLocked) return;
