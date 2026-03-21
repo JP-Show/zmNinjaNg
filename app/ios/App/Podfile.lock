@@ -1,4 +1,6 @@
 PODS:
+  - AparajitaCapacitorBiometricAuth (7.2.0):
+    - Capacitor
   - AparajitaCapacitorSecureStorage (7.1.6):
     - Capacitor
     - KeychainSwift (~> 21.0)
@@ -88,6 +90,7 @@ PODS:
   - SDWebImage/Core (5.21.4)
 
 DEPENDENCIES:
+  - "AparajitaCapacitorBiometricAuth (from `../../node_modules/@aparajita/capacitor-biometric-auth`)"
   - "AparajitaCapacitorSecureStorage (from `../../node_modules/@aparajita/capacitor-secure-storage`)"
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - CapacitorBarcodeScanner (from `../../node_modules/capacitor-barcode-scanner`)
@@ -117,6 +120,8 @@ SPEC REPOS:
     - SDWebImage
 
 EXTERNAL SOURCES:
+  AparajitaCapacitorBiometricAuth:
+    :path: "../../node_modules/@aparajita/capacitor-biometric-auth"
   AparajitaCapacitorSecureStorage:
     :path: "../../node_modules/@aparajita/capacitor-secure-storage"
   Capacitor:
@@ -145,6 +150,7 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capawesome/capacitor-badge"
 
 SPEC CHECKSUMS:
+  AparajitaCapacitorBiometricAuth: 8695431372a6ffa8cb5ba8166ec2bd4c1bddfde5
   AparajitaCapacitorSecureStorage: 502bff73187cf9d0164459458ccf47ec65d5895a
   Capacitor: 358dd1c3fdd71d969547b17e159fd8a7736cb45f
   CapacitorBarcodeScanner: 16eacd05fb1bbc8dee20dde07439d5f7b002b574
@@ -170,6 +176,6 @@ SPEC CHECKSUMS:
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   SDWebImage: d0184764be51240d49c761c37f53dd017e1ccaaf
 
-PODFILE CHECKSUM: ed412770a484beec20611084090728ec6ac82cbe
+PODFILE CHECKSUM: 9fed41661da3fb5d6cc43ed65f8baa5a2145a969
 
 COCOAPODS: 1.16.2
