@@ -8,6 +8,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Video as VideoIcon, Zap, Gauge, Leaf, RefreshCw, ChevronDown, Lock } from 'lucide-react';
 import { hasPinStored, storePin, clearPin, verifyPin } from '../lib/kioskPin';
+import { checkBiometricAvailability, authenticateWithBiometrics } from '../hooks/useBiometricAuth';
 import { PinPad, type PinPadMode } from '../components/kiosk/PinPad';
 import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
@@ -137,13 +138,32 @@ export default function Settings() {
     hasPinStored().then(setHasPin);
   });
 
-  const handleSetOrChangePin = useCallback(() => {
+  // Try biometrics first, fall back to PIN pad for verification
+  const verifyIdentity = useCallback(async (action: 'clear' | 'change'): Promise<boolean> => {
+    const biometricsAvailable = await checkBiometricAvailability();
+    if (biometricsAvailable) {
+      const result = await authenticateWithBiometrics(t('kiosk.biometric_prompt'));
+      if (result.success) return true;
+      // Biometrics failed/cancelled — fall through to PIN pad
+    }
+    setPendingAction(action);
+    setPinPadMode('unlock');
+    setPinError(null);
+    setShowPinPad(true);
+    return false;
+  }, [t]);
+
+  const handleSetOrChangePin = useCallback(async () => {
     if (hasPin) {
-      // Verify current PIN first, then proceed to set new one
-      setPendingAction('change');
-      setPinPadMode('unlock');
-      setPinError(null);
-      setShowPinPad(true);
+      const verified = await verifyIdentity('change');
+      if (verified) {
+        // Biometrics passed, go straight to set new PIN
+        setPendingAction(null);
+        setPinPadMode('set');
+        setPinError(null);
+        setPendingPin(null);
+        setShowPinPad(true);
+      }
     } else {
       setPendingAction(null);
       setPinPadMode('set');
@@ -151,15 +171,17 @@ export default function Settings() {
       setPendingPin(null);
       setShowPinPad(true);
     }
-  }, [hasPin]);
+  }, [hasPin, verifyIdentity]);
 
-  const handleClearPin = useCallback(() => {
-    // Verify current PIN before clearing
-    setPendingAction('clear');
-    setPinPadMode('unlock');
-    setPinError(null);
-    setShowPinPad(true);
-  }, []);
+  const handleClearPin = useCallback(async () => {
+    const verified = await verifyIdentity('clear');
+    if (verified) {
+      // Biometrics passed, clear immediately
+      await clearPin();
+      setHasPin(false);
+      toast({ title: t('kiosk.pin_cleared') });
+    }
+  }, [verifyIdentity, toast, t]);
 
   const handlePinSubmit = useCallback(async (pin: string) => {
     if (pinPadMode === 'unlock') {
