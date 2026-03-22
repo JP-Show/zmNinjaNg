@@ -17,6 +17,7 @@ import { cn } from '../../lib/utils';
 import { log, LogLevel } from '../../lib/logger';
 import type { VideoMarker } from '../../lib/video-markers';
 import type { MarkerConfig } from '../../types/videojs-markers';
+import { usePip } from '../../contexts/PipContext';
 
 interface VideoPlayerProps {
   /** The source URL of the video stream */
@@ -43,6 +44,8 @@ interface VideoPlayerProps {
   onReady?: (player: Player) => void;
   /** Callback on error */
   onError?: (error: any) => void;
+  /** Event ID for PiP persistence — when provided, enables PiP survival across navigation */
+  eventId?: string;
 }
 
 /**
@@ -61,6 +64,7 @@ interface VideoPlayerProps {
  * @param props.onMarkerClick - Marker click callback
  * @param props.onReady - Ready callback
  * @param props.onError - Error callback
+ * @param props.eventId - Event ID for PiP persistence
  */
 export function VideoPlayer({
   src,
@@ -74,11 +78,15 @@ export function VideoPlayer({
   markers,
   onMarkerClick,
   onReady,
-  onError
+  onError,
+  eventId
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const { adoptForPip, reclaimFromPip, closePip, activePipEventId } = usePip();
+  const adoptedForPip = useRef(false);
 
   const updateMarkers = (player: Player, markers: VideoMarker[]) => {
     if (!player || player.isDisposed()) return;
@@ -127,6 +135,29 @@ export function VideoPlayer({
       log.videoPlayer('Failed to update video markers', LogLevel.ERROR, err);
     }
   };
+
+  // Handle PiP reclaim or close on mount
+  useEffect(() => {
+    if (!eventId) return;
+
+    if (activePipEventId === eventId) {
+      // Same event — reclaim the player from PiP portal
+      const reclaimed = reclaimFromPip();
+      if (reclaimed && videoRef.current) {
+        const wrapper = reclaimed.videoEl.closest('video-js') || reclaimed.videoEl.parentElement;
+        if (wrapper) {
+          videoRef.current.appendChild(wrapper);
+        }
+        playerRef.current = reclaimed.player;
+        adoptedForPip.current = false;
+      }
+    } else if (activePipEventId) {
+      // Different event — close existing PiP
+      closePip();
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // Make sure Video.js player is only initialized once
@@ -198,11 +229,40 @@ export function VideoPlayer({
     }
   }, [markers, onMarkerClick]);
 
-  // Dispose the player on unmount
+  // Listen for PiP activation to adopt the player
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player || !eventId) return;
+
+    let videoEl: HTMLVideoElement | null = null;
+    try {
+      videoEl = player.tech({ IWillNotUseThisInPlugins: true })?.el() as HTMLVideoElement;
+    } catch {
+      return;
+    }
+    if (!videoEl || !(videoEl instanceof HTMLVideoElement)) return;
+
+    const handleEnterPip = () => {
+      adoptForPip(player, videoEl!, eventId);
+      adoptedForPip.current = true;
+    };
+
+    videoEl.addEventListener('enterpictureinpicture', handleEnterPip);
+    return () => {
+      videoEl!.removeEventListener('enterpictureinpicture', handleEnterPip);
+    };
+  }, [playerRef.current, eventId, adoptForPip]);
+
+  // Dispose the player on unmount (skip if adopted for PiP)
   useEffect(() => {
     const player = playerRef.current;
 
     return () => {
+      if (adoptedForPip.current) {
+        // PiP is active — don't dispose, the PipProvider owns the player now
+        playerRef.current = null;
+        return;
+      }
       if (player && !player.isDisposed()) {
         player.dispose();
         playerRef.current = null;
