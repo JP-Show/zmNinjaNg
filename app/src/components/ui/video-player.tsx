@@ -19,13 +19,6 @@ import type { VideoMarker } from '../../lib/video-markers';
 import type { MarkerConfig } from '../../types/videojs-markers';
 import { usePip } from '../../contexts/PipContext';
 import { Pip } from '../../plugins/pip';
-import { Capacitor } from '@capacitor/core';
-
-// On Android, override pictureInPictureEnabled so video.js creates its PiP button.
-// Android WebView doesn't support the browser PiP API, but we handle PiP natively.
-if (Capacitor.getPlatform() === 'android') {
-  Object.defineProperty(document, 'pictureInPictureEnabled', { value: true, configurable: true });
-}
 
 interface VideoPlayerProps {
   /** The source URL of the video stream */
@@ -187,7 +180,7 @@ export function VideoPlayer({
         muted,
         aspectRatio,
         poster,
-        disablePictureInPicture: false,
+        disablePictureInPicture: isAndroid,
         sources: [{
           src,
           type
@@ -261,41 +254,51 @@ export function VideoPlayer({
     };
   }, [playerRef.current, eventId, adoptForPip, isAndroid]);
 
-  // Android: override PiP button to use native PiP
+  // Android: add custom PiP button that triggers native ExoPlayer PiP
   useEffect(() => {
     if (!isAndroid || !playerRef.current || !eventId) return;
     const player = playerRef.current;
-
-    // Show the PiP toggle (video.js hides it because WebView doesn't support browser PiP)
-    const toggle = (player as any).controlBar?.pictureInPictureToggle;
+    let pipBtn: HTMLButtonElement | null = null;
 
     Pip.isPipSupported().then(({ supported }) => {
       if (!supported || !player || player.isDisposed()) return;
-      if (toggle) toggle.show();
+
+      const controlBar = (player as any).controlBar?.el() as HTMLElement | undefined;
+      if (!controlBar) return;
+
+      pipBtn = document.createElement('button');
+      pipBtn.className = 'vjs-control vjs-button';
+      pipBtn.title = 'Picture-in-Picture';
+      pipBtn.setAttribute('aria-label', 'Picture-in-Picture');
+      pipBtn.innerHTML = '<span class="vjs-icon-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor" opacity="0.3"/></svg></span>';
+
+      pipBtn.addEventListener('click', async () => {
+        const currentTime = player.currentTime() || 0;
+        const videoSrc = player.currentSrc();
+        if (videoSrc) {
+          player.pause();
+          await enterAndroidPip(videoSrc, currentTime, eventId);
+          const returnedPosition = getAndroidPipPosition();
+          if (returnedPosition > 0) {
+            player.currentTime(returnedPosition);
+          }
+          player.play();
+        }
+      });
+
+      // Insert before fullscreen button
+      const fullscreenBtn = controlBar.querySelector('.vjs-fullscreen-control');
+      if (fullscreenBtn) {
+        controlBar.insertBefore(pipBtn, fullscreenBtn);
+      } else {
+        controlBar.appendChild(pipBtn);
+      }
     });
 
-    const pipButton = toggle?.el();
-    if (!pipButton) return;
-
-    const handleNativePip = async (e: Event) => {
-      e.stopPropagation();
-      e.preventDefault();
-      const currentTime = player.currentTime() || 0;
-      const videoSrc = player.currentSrc();
-      if (videoSrc) {
-        player.pause();
-        await enterAndroidPip(videoSrc, currentTime, eventId);
-        const returnedPosition = getAndroidPipPosition();
-        if (returnedPosition > 0) {
-          player.currentTime(returnedPosition);
-        }
-        player.play();
-      }
-    };
-
-    pipButton.addEventListener('click', handleNativePip, true);
     return () => {
-      pipButton.removeEventListener('click', handleNativePip, true);
+      if (pipBtn?.parentNode) {
+        pipBtn.parentNode.removeChild(pipBtn);
+      }
     };
   }, [playerRef.current, eventId, isAndroid, enterAndroidPip, getAndroidPipPosition]);
 
