@@ -353,6 +353,7 @@ export default function EventDetail() {
                       autoplay={settings.eventVideoAutoplay}
                       markers={videoMarkers}
                       onMarkerClick={handleMarkerClick}
+                      eventId={event.Event.Id}
                       onError={() => {
                         log.eventDetail('Video playback failed, falling back to ZMS stream', LogLevel.INFO);
                         toast.error(t('event_detail.video_playback_failed'));
