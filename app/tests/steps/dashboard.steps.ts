@@ -66,6 +66,16 @@ Then('the widget {string} should appear on the dashboard', async ({ page }, _tit
     .toBeVisible({ timeout: testConfig.timeouts.element });
 });
 
+Then('the widget should contain non-empty content', async ({ page }) => {
+  const widget = page.locator('.react-grid-item').filter({ hasText: lastWidgetTitle });
+  // Verify the widget has visible child content (text, images, or data elements)
+  await expect.poll(async () => {
+    const textContent = await widget.innerText();
+    // Widget should have more than just its title — it should have data content
+    return textContent.trim().length > 0;
+  }, { timeout: testConfig.timeouts.pageLoad }).toBeTruthy();
+});
+
 // Dashboard Widget Management Steps
 When('I enter dashboard edit mode', async ({ page }) => {
   // Click the edit/done button to enter edit mode

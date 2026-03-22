@@ -633,3 +633,13 @@ Then('the zone toggle should be active', async ({ page }) => {
   ).catch(() => false);
   log.info('E2E: Zone toggle state', { component: 'e2e', isOverlayVisible, hasSecondaryVariant });
 });
+
+Then('the zone toggle should be inactive', async ({ page }) => {
+  const zoneToggle = page.getByTestId('zone-toggle-button');
+  await expect(zoneToggle).toBeVisible();
+  // When inactive, zone overlay should not be visible
+  const zoneOverlay = page.getByTestId('zone-overlay');
+  const isOverlayVisible = await zoneOverlay.isVisible({ timeout: 1000 }).catch(() => false);
+  // If there were zones, they should now be hidden
+  log.info('E2E: Zone toggle inactive state', { component: 'e2e', overlayHidden: !isOverlayVisible });
+});

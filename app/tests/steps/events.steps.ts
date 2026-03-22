@@ -126,6 +126,20 @@ When('I clear event filters', async ({ page }) => {
   await clearButton.click();
 });
 
+When('I select a monitor filter if available', async ({ page }) => {
+  const panel = page.getByTestId('events-filter-panel');
+  // Look for a monitor select/checkbox in the filter panel
+  const monitorFilter = panel.locator('[data-testid="events-monitor-filter"]')
+    .or(panel.locator('select').first())
+    .or(panel.locator('[role="checkbox"]').first());
+
+  const isVisible = await monitorFilter.isVisible({ timeout: 2000 }).catch(() => false);
+  if (isVisible) {
+    await monitorFilter.click();
+    await page.waitForTimeout(300);
+  }
+});
+
 // Event Favorite Steps
 When('I favorite the first event if events exist', async ({ page }) => {
   favoriteToggled = false;
