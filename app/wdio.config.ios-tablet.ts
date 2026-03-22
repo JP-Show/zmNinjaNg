@@ -6,12 +6,14 @@ export const config: Options.Testrunner = {
   runner: 'local',
   port: platformConfig.ios.appiumPort,
   specs: ['tests/features/**/*.feature'],
+  maxInstances: 1,
   capabilities: [{
     ...getAppiumCapabilities(platformConfig.ios.tablet.simulator),
     'custom:platformProfile': 'ios-tablet',
   } as WebdriverIO.Capabilities],
   services: [
     ['appium', {
+      command: 'appium',
       args: { port: platformConfig.ios.appiumPort },
     }],
   ],

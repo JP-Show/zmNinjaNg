@@ -6,6 +6,7 @@ export const config: Options.Testrunner = {
   specs: ['./specs/**/*.spec.ts'],
   services: [
     ['appium', {
+      command: 'appium',
       args: { port: 4723 },
     }],
   ],

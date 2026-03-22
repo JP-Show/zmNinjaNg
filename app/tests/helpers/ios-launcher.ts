@@ -45,5 +45,6 @@ export function getAppiumCapabilities(deviceName: string): Record<string, unknow
     'appium:autoWebview': true,
     'appium:webviewConnectTimeout': platformConfig.timeouts.webviewSwitch,
     'appium:noReset': true,
+    'appium:autoAcceptAlerts': true,
   };
 }
