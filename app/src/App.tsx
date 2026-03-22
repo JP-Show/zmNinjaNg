@@ -22,6 +22,7 @@ import { NotificationHandler } from './components/NotificationHandler';
 import { Button } from './components/ui/button';
 import { X } from 'lucide-react';
 import { log, LogLevel, logger } from './lib/logger';
+import { PipProvider } from './contexts/PipContext';
 
 // Lazy load route components for code splitting
 const ProfileForm = lazy(() => import('./pages/ProfileForm'));
@@ -289,45 +290,47 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="light">
-          <div
-            className={isBootstrapping ? 'pointer-events-none select-none' : ''}
-            aria-busy={isBootstrapping}
-          >
-            <HashRouter>
-              <NotificationHandler />
-              <AppRoutes />
-            </HashRouter>
-          </div>
-          <Toaster />
-          {isBootstrapping && (
+          <PipProvider>
             <div
-              className="fixed inset-0 z-[9998] flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-auto touch-none"
-              data-testid="app-init-blocker"
+              className={isBootstrapping ? 'pointer-events-none select-none' : ''}
+              aria-busy={isBootstrapping}
             >
-              <div className="w-[min(90vw,24rem)] rounded-lg border border-border bg-background/95 px-4 py-4 text-center shadow-lg">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  <div className="text-sm font-medium">{t('app_init.toast_title')}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {bootstrapStep ? t(`app_init.step_${bootstrapStep}`) : t('app_init.step_start')}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancelBootstrap}
-                    className="mt-2"
-                    data-testid="cancel-bootstrap-button"
-                  >
-                    <X className="mr-1.5 h-3.5 w-3.5" />
-                    {t('common.cancel')}
-                  </Button>
-                  <div className="text-xs text-muted-foreground">
-                    {t('app_init.cancel_hint_single')}
+              <HashRouter>
+                <NotificationHandler />
+                <AppRoutes />
+              </HashRouter>
+            </div>
+            <Toaster />
+            {isBootstrapping && (
+              <div
+                className="fixed inset-0 z-[9998] flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-auto touch-none"
+                data-testid="app-init-blocker"
+              >
+                <div className="w-[min(90vw,24rem)] rounded-lg border border-border bg-background/95 px-4 py-4 text-center shadow-lg">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <div className="text-sm font-medium">{t('app_init.toast_title')}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {bootstrapStep ? t(`app_init.step_${bootstrapStep}`) : t('app_init.step_start')}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelBootstrap}
+                      className="mt-2"
+                      data-testid="cancel-bootstrap-button"
+                    >
+                      <X className="mr-1.5 h-3.5 w-3.5" />
+                      {t('common.cancel')}
+                    </Button>
+                    <div className="text-xs text-muted-foreground">
+                      {t('app_init.cancel_hint_single')}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </PipProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
