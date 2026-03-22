@@ -19,6 +19,13 @@ import type { VideoMarker } from '../../lib/video-markers';
 import type { MarkerConfig } from '../../types/videojs-markers';
 import { usePip } from '../../contexts/PipContext';
 import { Pip } from '../../plugins/pip';
+import { Capacitor } from '@capacitor/core';
+
+// On Android, override pictureInPictureEnabled so video.js creates its PiP button.
+// Android WebView doesn't support the browser PiP API, but we handle PiP natively.
+if (Capacitor.getPlatform() === 'android') {
+  Object.defineProperty(document, 'pictureInPictureEnabled', { value: true, configurable: true });
+}
 
 interface VideoPlayerProps {
   /** The source URL of the video stream */
@@ -259,16 +266,15 @@ export function VideoPlayer({
     if (!isAndroid || !playerRef.current || !eventId) return;
     const player = playerRef.current;
 
-    // Check if native PiP is supported on this device
+    // Show the PiP toggle (video.js hides it because WebView doesn't support browser PiP)
+    const toggle = (player as any).controlBar?.pictureInPictureToggle;
+
     Pip.isPipSupported().then(({ supported }) => {
-      if (!supported) {
-        // Hide PiP button on unsupported Android devices
-        const toggle = (player as any).controlBar?.pictureInPictureToggle;
-        if (toggle) toggle.hide();
-      }
+      if (!supported || !player || player.isDisposed()) return;
+      if (toggle) toggle.show();
     });
 
-    const pipButton = (player as any).controlBar?.pictureInPictureToggle?.el();
+    const pipButton = toggle?.el();
     if (!pipButton) return;
 
     const handleNativePip = async (e: Event) => {
