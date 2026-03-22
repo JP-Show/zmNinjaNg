@@ -20,9 +20,9 @@ export const config: Options.Testrunner = {
   framework: 'cucumber',
   cucumberOpts: {
     require: ['tests/steps-wdio/**/*.steps.ts'],
-    tagExpression: 'not @native and not @android and not @tauri and not @web',
+    tags: 'not @native and not @android and not @tauri and not @web',
     timeout: platformConfig.timeouts.appLaunch + 60000,
   },
   reporters: ['spec'],
-  baseUrl: platformConfig.web.baseUrl,
+  baseUrl: 'http://localhost',
 };

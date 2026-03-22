@@ -10,6 +10,7 @@ export const config: Options.Testrunner = {
   capabilities: [{
     ...getAppiumCapabilities(platformConfig.ios.tablet.simulator),
     'custom:platformProfile': 'ios-tablet',
+    maxInstances: 1,
   } as WebdriverIO.Capabilities],
   services: [
     ['appium', {
@@ -20,9 +21,9 @@ export const config: Options.Testrunner = {
   framework: 'cucumber',
   cucumberOpts: {
     require: ['tests/steps-wdio/**/*.steps.ts'],
-    tagExpression: 'not @native and not @android and not @tauri and not @web and not @ios-phone',
+    tags: 'not @native and not @android and not @tauri and not @web and not @ios-phone',
     timeout: platformConfig.timeouts.appLaunch + 60000,
   },
   reporters: ['spec'],
-  baseUrl: platformConfig.web.baseUrl,
+  baseUrl: 'http://localhost',
 };
