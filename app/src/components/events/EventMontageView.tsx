@@ -18,7 +18,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { SecureImage } from '../ui/secure-image';
 import { downloadEventVideo } from '../../lib/download';
-import { getEventImageUrl } from '../../api/events';
+import { getEventImageUrl, type EventFilters } from '../../api/events';
 import { calculateThumbnailDimensions } from '../../lib/event-utils';
 import { ZM_INTEGRATION } from '../../lib/zmninja-ng-constants';
 import type { Monitor, Tag } from '../../api/types';
@@ -38,7 +38,7 @@ interface EventMontageViewProps {
   isFetching?: boolean;
   onLoadMore: () => void;
   eventTagMap?: Map<string, Tag[]>;
-  eventFilters?: Record<string, unknown>;
+  eventFilters?: EventFilters;
 }
 
 export const EventMontageView = ({

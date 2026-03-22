@@ -26,7 +26,6 @@ interface UseEventNavigationReturn {
 }
 
 export function useEventNavigation({
-  currentEventId,
   currentStartDateTime,
 }: UseEventNavigationOptions): UseEventNavigationReturn {
   const navigate = useNavigate();

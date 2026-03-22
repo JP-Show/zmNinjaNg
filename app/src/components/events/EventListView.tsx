@@ -12,7 +12,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { EventCard } from './EventCard';
-import { getEventImageUrl } from '../../api/events';
+import { getEventImageUrl, type EventFilters } from '../../api/events';
 import { calculateThumbnailDimensions, EVENT_GRID_CONSTANTS } from '../../lib/event-utils';
 // import { EVENT_LIST } from '../../lib/zmninja-ng-constants';
 import type { Monitor, Tag } from '../../api/types';
@@ -31,7 +31,7 @@ interface EventListViewProps {
   parentRef: React.RefObject<HTMLDivElement | null>;
   parentElement: HTMLDivElement | null;
   eventTagMap?: Map<string, Tag[]>;
-  eventFilters?: Record<string, unknown>;
+  eventFilters?: EventFilters;
 }
 
 // Helper to render a single event item
@@ -50,7 +50,7 @@ const EventItem = ({
   portalUrl: string;
   accessToken?: string;
   eventTagMap?: Map<string, Tag[]>;
-  eventFilters?: Record<string, unknown>;
+  eventFilters?: EventFilters;
 }) => {
   const { Event } = event;
   const monitorData = monitors.find((m) => m.Monitor.Id === Event.MonitorId)?.Monitor;
