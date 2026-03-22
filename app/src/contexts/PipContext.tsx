@@ -7,6 +7,8 @@
  */
 
 import { createContext, useContext, useRef, useState, useCallback, type ReactNode } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Pip } from '../plugins/pip';
 import type videojs from 'video.js';
 
 type Player = ReturnType<typeof videojs>;
@@ -26,6 +28,12 @@ interface PipContextValue {
   closePip: () => void;
   /** The event ID of the currently active PiP video, or null */
   activePipEventId: string | null;
+  /** Enter Android native PiP mode with a video URL */
+  enterAndroidPip: (url: string, position: number, eventId: string) => Promise<void>;
+  /** Get the last known playback position from Android PiP */
+  getAndroidPipPosition: () => number;
+  /** Whether the current platform is Android */
+  isAndroid: boolean;
 }
 
 const PipContext = createContext<PipContextValue | null>(null);
@@ -121,8 +129,35 @@ export function PipProvider({ children }: { children: ReactNode }) {
     cleanup();
   }, [cleanup]);
 
+  const androidPipPositionRef = useRef<number>(0);
+
+  const enterAndroidPip = useCallback(async (url: string, position: number, eventId: string) => {
+    // Close any existing browser PiP first
+    if (pipStateRef.current) {
+      cleanup();
+    }
+
+    setActivePipEventId(eventId);
+    androidPipPositionRef.current = position;
+
+    try {
+      const result = await Pip.enterPip({ url, position, aspectRatio: '16:9' });
+      androidPipPositionRef.current = result.position;
+    } catch {
+      // Native PiP failed or was cancelled
+    } finally {
+      setActivePipEventId(null);
+    }
+  }, [cleanup]);
+
+  const getAndroidPipPosition = useCallback(() => {
+    return androidPipPositionRef.current;
+  }, []);
+
+  const isAndroid = Capacitor.getPlatform() === 'android';
+
   return (
-    <PipContext.Provider value={{ adoptForPip, reclaimFromPip, closePip, activePipEventId }}>
+    <PipContext.Provider value={{ adoptForPip, reclaimFromPip, closePip, activePipEventId, enterAndroidPip, getAndroidPipPosition, isAndroid }}>
       {children}
       {/* Hidden portal for adopted PiP elements — sibling of children, outside router */}
       <div ref={portalRef} style={{ display: 'none' }} data-testid="pip-portal" />
