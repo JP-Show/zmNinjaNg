@@ -1,8 +1,14 @@
 package com.zoneminder.zmNinjaNG;
 
+import android.app.PendingIntent;
 import android.app.PictureInPictureParams;
+import android.app.RemoteAction;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Rational;
@@ -10,21 +16,39 @@ import android.util.Rational;
 import android.app.Activity;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.Player;
-import androidx.media3.common.VideoSize;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PipActivity extends Activity {
 
     private static final String TAG = "PipActivity";
+    private static final String ACTION_PLAY_PAUSE = "com.zoneminder.zmNinjaNG.PIP_PLAY_PAUSE";
+
     private ExoPlayer player;
     private PlayerView playerView;
     private boolean pipEntered = false;
     private Rational aspectRatio;
+
+    private final BroadcastReceiver pipReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (ACTION_PLAY_PAUSE.equals(intent.getAction()) && player != null) {
+                if (player.isPlaying()) {
+                    player.pause();
+                } else {
+                    player.play();
+                }
+                // Update PiP actions to reflect new play/pause state
+                updatePipActions();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +121,13 @@ public class PipActivity extends Activity {
                     .setAspectRatio(aspectRatio);
             setPictureInPictureParams(pipBuilder.build());
         }
+
+        // Register broadcast receiver for PiP controls
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(pipReceiver, new IntentFilter(ACTION_PLAY_PAUSE), Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(pipReceiver, new IntentFilter(ACTION_PLAY_PAUSE));
+        }
     }
 
     @Override
@@ -115,12 +146,42 @@ public class PipActivity extends Activity {
         Log.d(TAG, "enterPipMode");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder()
-                    .setAspectRatio(aspectRatio);
+                    .setAspectRatio(aspectRatio)
+                    .setActions(buildPipActions());
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 pipBuilder.setAutoEnterEnabled(true);
             }
             enterPictureInPictureMode(pipBuilder.build());
         }
+    }
+
+    private void updatePipActions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PictureInPictureParams.Builder pipBuilder = new PictureInPictureParams.Builder()
+                    .setActions(buildPipActions());
+            setPictureInPictureParams(pipBuilder.build());
+        }
+    }
+
+    private List<RemoteAction> buildPipActions() {
+        List<RemoteAction> actions = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            boolean isPlaying = player != null && player.isPlaying();
+            int iconRes = isPlaying
+                    ? android.R.drawable.ic_media_pause
+                    : android.R.drawable.ic_media_play;
+            String title = isPlaying ? "Pause" : "Play";
+
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    this, 0, new Intent(ACTION_PLAY_PAUSE),
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            RemoteAction action = new RemoteAction(
+                    Icon.createWithResource(this, iconRes),
+                    title, title, pendingIntent);
+            actions.add(action);
+        }
+        return actions;
     }
 
     private void finishWithPosition() {
@@ -145,6 +206,9 @@ public class PipActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        try {
+            unregisterReceiver(pipReceiver);
+        } catch (Exception ignored) {}
         if (player != null) {
             player.release();
             player = null;
