@@ -5,7 +5,7 @@
  * Includes play/pause, speed controls, frame navigation, and alarm frames display.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
@@ -26,6 +26,7 @@ import { log, LogLevel } from '../../lib/logger';
 import { getEventZmsUrl, getZmsControlUrl } from '../../lib/url-builder';
 import { useZoomPan } from '../../hooks/useZoomPan';
 import { ZoomControls } from '../ui/ZoomControls';
+import { useBandwidthSettings } from '../../hooks/useBandwidthSettings';
 
 // ZoneMinder stream command constants
 const ZM_CMD = {
@@ -68,6 +69,7 @@ export function ZmsEventPlayer({
   className,
 }: ZmsEventPlayerProps) {
   const { t } = useTranslation();
+  const bandwidth = useBandwidthSettings();
   const [currentFrame, setCurrentFrame] = useState(1);
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackSpeed, setPlaybackSpeed] = useState(100); // 100 = 1x speed
@@ -130,6 +132,37 @@ export function ZmsEventPlayer({
       });
     }
   }, [portalUrl, apiUrl, connKey, token]);
+
+  // Poll stream status to track playback position
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const queryStatus = useCallback(async () => {
+    const url = getZmsControlUrl(portalUrl, ZM_CMD.QUERY, connKey, { token, apiUrl });
+    try {
+      const resp = await httpGet<{ status?: boolean; progress?: number; paused?: boolean }>(url);
+      if (resp && typeof resp.progress === 'number') {
+        const frame = Math.max(1, Math.round(resp.progress * totalFrames));
+        setCurrentFrame(frame);
+      }
+    } catch {
+      // Status query failed — ignore and retry next tick
+    }
+  }, [portalUrl, connKey, token, apiUrl, totalFrames]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      pollTimer.current = setInterval(queryStatus, bandwidth.zmsStatusInterval);
+    } else if (pollTimer.current) {
+      clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+    return () => {
+      if (pollTimer.current) {
+        clearInterval(pollTimer.current);
+        pollTimer.current = null;
+      }
+    };
+  }, [isPlaying, queryStatus, bandwidth.zmsStatusInterval]);
 
   // Calculate time offset from frame number
   const frameToOffset = useCallback((frame: number) => {

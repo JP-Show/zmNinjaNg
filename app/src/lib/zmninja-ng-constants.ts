@@ -246,6 +246,8 @@ export interface BandwidthSettings {
   imageQuality: number;
   /** Stream max FPS */
   streamMaxFps: number;
+  /** ZMS playback status polling interval (ms) */
+  zmsStatusInterval: number;
 }
 
 /**
@@ -266,6 +268,7 @@ export const BANDWIDTH_SETTINGS: Record<BandwidthMode, BandwidthSettings> = {
     imageScale: 100, // 100%
     imageQuality: 100, // 100%
     streamMaxFps: 10, // 10 FPS
+    zmsStatusInterval: 3000, // 3 sec
   },
   low: {
     monitorStatusInterval: 40000, // 40 sec
@@ -278,6 +281,7 @@ export const BANDWIDTH_SETTINGS: Record<BandwidthMode, BandwidthSettings> = {
     imageScale: 50, // 50%
     imageQuality: 50, // 50%
     streamMaxFps: 5, // 5 FPS
+    zmsStatusInterval: 5000, // 5 sec
   },
 } as const;
 
