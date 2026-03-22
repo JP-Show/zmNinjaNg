@@ -7,14 +7,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Rational;
 
+import android.app.Activity;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
-public class PipActivity extends AppCompatActivity {
+public class PipActivity extends Activity {
 
     private ExoPlayer player;
     private PlayerView playerView;
