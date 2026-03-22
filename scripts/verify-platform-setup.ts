@@ -1,6 +1,5 @@
 import { execSync } from 'child_process';
 import * as fs from 'fs';
-import * as net from 'net';
 import * as path from 'path';
 
 const SCRIPT_DIR = path.dirname(new URL(import.meta.url).pathname);
@@ -141,18 +140,13 @@ try {
 // 12. Ports 4723, 4444, 9222 available
 const ports = [4723, 4444, 9222];
 for (const port of ports) {
-  const isAvailable = await new Promise<boolean>((resolve) => {
-    const server = net.createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => {
-      server.close(() => resolve(true));
-    });
-    server.listen(port, '127.0.0.1');
-  });
-  if (isAvailable) {
-    pass(`Port ${port} available`, 'not in use');
-  } else {
+  try {
+    // Use lsof to check if port is in use (avoids async)
+    run(`lsof -i :${port} -sTCP:LISTEN`);
     fail(`Port ${port} in use`, `stop whatever is using port ${port} before running tests`);
+  } catch {
+    // lsof exits non-zero when nothing is listening — port is free
+    pass(`Port ${port} available`, 'not in use');
   }
 }
 
