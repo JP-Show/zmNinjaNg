@@ -159,6 +159,72 @@ export async function getEvents(filters: EventFilters = {}): Promise<EventsRespo
 }
 
 /**
+ * Fetch the next or previous event relative to a given timestamp.
+ * Uses the same filters as the events list to maintain consistency.
+ *
+ * Expects filters with already server-formatted dates (from Events page navigation state).
+ * Builds the ZM API filter path directly to use StartDateTime comparisons for both directions.
+ */
+export async function getAdjacentEvent(
+  direction: 'next' | 'prev',
+  currentStartDateTime: string,
+  filters: EventFilters = {}
+): Promise<EventData | null> {
+  const client = getApiClient();
+
+  // Build filter segments (same logic as getEvents, but with custom date handling)
+  const filterSegments: string[] = [];
+  const addSegment = (segment: string) => {
+    filterSegments.push(`/${encodeURIComponent(segment)}`);
+  };
+
+  // Apply monitor filter from original filters
+  if (filters.monitorId) {
+    const monitorIds = filters.monitorId.split(',');
+    monitorIds.forEach(id => addSegment(`MonitorId:${id.trim()}`));
+  }
+
+  // Apply alarm frames filter
+  if (filters.minAlarmFrames) {
+    addSegment(`AlarmFrames >=:${filters.minAlarmFrames}`);
+  }
+
+  // Apply notes filter
+  if (filters.notesRegexp) {
+    addSegment(`Notes REGEXP:${filters.notesRegexp}`);
+  }
+
+  // Use StartDateTime for adjacency (not the original date range filters)
+  if (direction === 'next') {
+    addSegment(`StartDateTime >:${currentStartDateTime}`);
+  } else {
+    addSegment(`StartDateTime <:${currentStartDateTime}`);
+  }
+
+  const filterPath = filterSegments.join('');
+  const url = `/events/index${filterPath}.json`;
+
+  const params: Record<string, string | number> = {
+    page: 1,
+    limit: 1,
+    sort: 'StartDateTime',
+    direction: direction === 'next' ? 'asc' : 'desc',
+  };
+
+  try {
+    const response = await client.get<EventsResponse>(url, { params });
+    const validated = validateApiResponse(EventsResponseSchema, response.data, {
+      endpoint: url,
+      method: 'GET',
+    });
+    return validated.events[0] || null;
+  } catch (err) {
+    log.api('Failed to fetch adjacent event', LogLevel.ERROR, { direction, error: err });
+    return null;
+  }
+}
+
+/**
  * Get a single event by ID.
  *
  * @param eventId - The ID of the event to fetch
