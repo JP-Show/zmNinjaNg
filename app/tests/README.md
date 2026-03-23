@@ -137,33 +137,102 @@ ZM_PASSWORD_1=password
 
 All commands run from the `app/` directory.
 
+### Web E2E (fast, no devices needed)
+
 | Command | Description |
 |---|---|
+| `npm run test:e2e` | All web browser tests |
+| `npm run test:e2e -- tests/features/dashboard.feature` | Single feature file |
+| `npm run test:e2e -- --headed` | See the browser |
+| `npm run test:e2e:visual-update` | Regenerate web visual baselines |
 | `npm test` | Unit tests (Vitest, no server needed) |
-| `npm run test:e2e` | Web browser tests (fast, no simulators) |
-| `npm run test:e2e:android` | Android emulator via Playwright CDP |
-| `npm run test:e2e:ios-phone` | iPhone simulator via Appium XCUITest |
-| `npm run test:e2e:ios-tablet` | iPad simulator via Appium XCUITest |
-| `npm run test:e2e:tauri` | Tauri desktop via tauri-driver |
-| `npm run test:e2e:all-platforms` | All platforms sequentially |
-| `npm run test:native` | Native-only Appium suite (PiP, biometrics, etc.) |
+| `npm run test:all` | Unit + web E2E |
 | `npm run test:platform:setup` | Verify tools and simulators are ready |
 
-### Run a Single Feature File
+### Device E2E (requires simulators/emulators)
+
+Device tests are run via shell scripts from the repo root. Each script handles building the app, booting the device, and running the tests.
+
+| Command | What it does |
+|---|---|
+| `bash scripts/test-android.sh` | Build APK, boot emulator, forward CDP port, run Playwright |
+| `bash scripts/test-ios.sh phone` | Build iOS app, boot iPhone 15 sim, start Appium, run WebDriverIO |
+| `bash scripts/test-ios.sh tablet` | Build iOS app, boot iPad Air sim, start Appium, run WebDriverIO |
+| `bash scripts/test-tauri.sh` | Start tauri-driver, run WebDriverIO against Tauri app |
+| `bash scripts/test-all-platforms.sh` | Run all 5 platforms sequentially (web → Android → iOS phone → iOS tablet → Tauri) |
+
+### Running Device Tests Step by Step
+
+#### Android
 
 ```bash
-# Web
-npm run test:e2e -- tests/features/dashboard.feature
+# 1. Build and sync the Capacitor app to Android
+cd app && npm run android:sync
 
-# Android
-npm run test:e2e:android -- tests/features/dashboard.feature
+# 2. Run the test script — it builds the APK, boots the emulator,
+#    installs the app, forwards the CDP port, and runs Playwright
+#    against the Android WebView.
+bash scripts/test-android.sh
+
+# Run a single feature file:
+bash scripts/test-android.sh tests/features/dashboard.feature
 ```
 
-### Run with Visible Browser (Web Only)
+**How it works:** The Android WebView exposes Chrome DevTools Protocol on a debug socket. The script uses `adb forward` to map it to `localhost:9222`, then Playwright connects via `connectOverCDP()` and drives the app like a regular browser.
+
+#### iOS (iPhone)
 
 ```bash
-npm run test:e2e -- --headed
+# 1. Build and sync the Capacitor app to iOS
+cd app && npm run ios:sync
+
+# 2. Run the test script — it builds the app via xcodebuild for the
+#    simulator, boots iPhone 15, starts Appium with XCUITest driver,
+#    launches the app, switches to the WebView context, and runs
+#    WebDriverIO tests.
+bash scripts/test-ios.sh phone
 ```
+
+**How it works:** Appium's XCUITest driver launches the app on the iOS simulator. WebDriverIO connects to Appium (default port 4723), which switches into the WKWebView context. From there, WebDriverIO can find elements by `data-testid` and drive the app.
+
+#### iOS (iPad)
+
+```bash
+cd app && npm run ios:sync
+bash scripts/test-ios.sh tablet
+```
+
+Same flow as iPhone, but targets `iPad Air 11-inch (M2)`.
+
+#### Tauri Desktop
+
+```bash
+# Run the test script — it starts tauri-driver on port 4444 and runs
+# WebDriverIO against the Tauri app's WKWebView.
+bash scripts/test-tauri.sh
+```
+
+**How it works:** `tauri-driver` implements the WebDriver protocol and connects to the Tauri app's WKWebView. WebDriverIO drives the app through this bridge.
+
+#### All Platforms
+
+```bash
+bash scripts/test-all-platforms.sh
+```
+
+Runs in order: web → Android → iOS phone → iOS tablet → Tauri.
+
+### Device Screenshot Capture
+
+For capturing device screenshots without running the full E2E suite:
+
+| Command | Description |
+|---|---|
+| `npm run test:screenshots:ios-phone` | Capture screenshots on iPhone sim |
+| `npm run test:screenshots:ios-tablet` | Capture screenshots on iPad sim |
+| `npm run test:screenshots:android` | Capture screenshots on Android emulator |
+
+These use `wdio.config.device-screenshots.ts` with Appium to launch the app and capture screenshots of each screen.
 
 ### Platform Tags
 
@@ -173,6 +242,7 @@ Scenarios are tagged to control which platforms run them:
 |---|---|
 | `@all` | All platforms |
 | `@android` | Android emulator only |
+| `@ios` | iPhone + iPad simulators |
 | `@ios-phone` | iPhone simulator only |
 | `@ios-tablet` | iPad simulator only |
 | `@tauri` | Tauri desktop only |
@@ -204,13 +274,13 @@ Baselines are checked into git so every developer and CI run compares against th
 On first run for a platform, or after intentional UI changes, generate new baselines:
 
 ```bash
+# Web baselines
 npm run test:e2e:visual-update
-```
 
-This runs the full web suite with `--update-snapshots`. For other platforms, run the platform-specific command with the update flag:
-
-```bash
-npm run test:e2e:android -- --update-snapshots
+# Device baselines (pass the update flag through the test script)
+bash scripts/test-android.sh --update-snapshots
+bash scripts/test-ios.sh phone --update-snapshots
+bash scripts/test-ios.sh tablet --update-snapshots
 ```
 
 ### Threshold
@@ -223,7 +293,40 @@ When a visual test fails, a diff image is saved next to the baseline file showin
 
 ---
 
-## 6. Adding Tests
+## 6. Architecture
+
+### Two-Driver Design
+
+Tests use two browser automation drivers:
+
+| Driver | Platforms | Why |
+|---|---|---|
+| **Playwright** | Web, Android | Connects to Chromium-based WebViews via CDP |
+| **WebDriverIO + Appium** | iOS, Tauri | Drives WKWebView (WebKit) via XCUITest or tauri-driver |
+
+### TestActions Abstraction
+
+Step definitions never call Playwright or WebDriverIO APIs directly. They use a shared `TestActions` interface (`tests/actions/types.ts`) so the same `.feature` files and step definitions work across all 5 platforms.
+
+Implementations:
+- `PlaywrightActions` (`tests/actions/playwright-actions.ts`) — for web and Android
+- `WebDriverIOActions` — for iOS and Tauri
+
+### Config Loader
+
+`tests/platforms.config.ts` loads defaults from `platforms.config.defaults.ts` and merges any overrides from `platforms.config.local.ts` (gitignored). The merged config provides simulator names, ports, timeouts, and app paths to all test infrastructure.
+
+### Helper Modules
+
+| File | Purpose |
+|---|---|
+| `tests/helpers/config.ts` | Loads server credentials from `.env` |
+| `tests/helpers/ios-launcher.ts` | Builds iOS app, boots simulators, generates Appium capabilities |
+| `tests/helpers/visual-regression.ts` | Screenshot paths and diff threshold constants |
+
+---
+
+## 7. Adding Tests
 
 See the **"Extending Tests for New Features"** section in `AGENTS.md` for the full workflow.
 
@@ -237,7 +340,7 @@ Summary:
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 ### "WebView context not found"
 
