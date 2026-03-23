@@ -66,6 +66,41 @@ async function setOrientation(orientation: 'PORTRAIT' | 'LANDSCAPE'): Promise<vo
   }
 }
 
+async function dismissKioskOverlay(): Promise<void> {
+  const overlay = await $('[data-testid="kiosk-overlay"]');
+  if (!(await overlay.isDisplayed().catch(() => false))) return;
+
+  // Try clicking the unlock button and entering a common PIN
+  const unlockBtn = await $('[data-testid="kiosk-unlock-button"]');
+  if (await unlockBtn.isDisplayed().catch(() => false)) {
+    await unlockBtn.click();
+    await browser.pause(500);
+
+    // Enter PIN digits 1234 (common test PIN)
+    for (const digit of ['1', '2', '3', '4']) {
+      const digitBtn = await $(`[data-testid="kiosk-pin-digit-${digit}"]`);
+      if (await digitBtn.isDisplayed().catch(() => false)) {
+        await digitBtn.click();
+        await browser.pause(150);
+      }
+    }
+    await browser.pause(1000);
+  }
+
+  // If still visible, try clearing kiosk state via JS
+  if (await overlay.isDisplayed().catch(() => false)) {
+    await browser.execute(() => {
+      try {
+        localStorage.removeItem('kiosk_locked');
+        localStorage.removeItem('kiosk_pin_hash');
+        localStorage.removeItem('kiosk_pin_salt');
+      } catch { /* ignore */ }
+    });
+    await browser.url('/');
+    await browser.pause(2000);
+  }
+}
+
 async function login(): Promise<void> {
   await ensureWebviewContext();
   await browser.url('/');
@@ -80,6 +115,9 @@ async function login(): Promise<void> {
   }
 
   await browser.pause(2000);
+
+  // Dismiss kiosk overlay if present from a previous test run
+  await dismissKioskOverlay();
 
   // Check if already logged in
   const navVisible = await $('[data-testid="nav-item-dashboard"]')
