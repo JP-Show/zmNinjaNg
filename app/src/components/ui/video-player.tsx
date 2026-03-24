@@ -216,7 +216,7 @@ export function VideoPlayer({
 
           // Block native video fullscreen on iOS
           try {
-            const videoEl = player.tech({ IWillNotUseThisInPlugins: true })?.el() as HTMLVideoElement;
+            const videoEl = player.tech({ IWillNotUseThisInPlugins: true })?.el() as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
             if (videoEl?.webkitEnterFullscreen) {
               videoEl.webkitEnterFullscreen = () => {};
             }
