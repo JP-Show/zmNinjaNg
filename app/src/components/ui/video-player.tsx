@@ -180,6 +180,7 @@ export function VideoPlayer({
         responsive: true,
         fluid: true,
         playsinline: true,
+        preferFullWindow: true,
         muted,
         aspectRatio,
         poster,
