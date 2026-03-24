@@ -5,7 +5,7 @@
  * Handles HLS streams, authenticated requests (via hooks), and cleanup.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import 'videojs-markers';
