@@ -20,11 +20,12 @@ import { ZmsEventPlayer } from '../components/events/ZmsEventPlayer';
 import { TagChip } from '../components/events/TagChip';
 import { ArrowLeft, Calendar, Clock, HardDrive, AlertTriangle, Download, Archive, Video, Star, Timer, Tag, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getEventCauseIcon } from '../lib/event-icons';
+import { getObjectClassIconFromList } from '../lib/object-class-icons';
 import { useDateTimeFormat } from '../hooks/useDateTimeFormat';
 import { downloadEventVideo } from '../lib/download';
 import { parseMonitorRotation } from '../lib/monitor-rotation';
 import { toast } from 'sonner';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { log, LogLevel } from '../lib/logger';
 import { generateEventMarkers, type VideoMarker } from '../lib/video-markers';
@@ -116,6 +117,15 @@ export default function EventDetail() {
     });
     toast.info(t('event_detail.marker_jumped', { text: marker.text }));
   }, [t]);
+
+  // Set document title for iOS fullscreen banner (shows instead of raw URL)
+  useEffect(() => {
+    const monitorName = monitorData?.Monitor.Name;
+    document.title = monitorName
+      ? `${monitorName} – Event ${id}`
+      : `Event ${id}`;
+    return () => { document.title = 'zmNinjaNG'; };
+  }, [id, monitorData]);
 
   // Pinch-to-zoom and pan for event video/image
   const zoomPan = useZoomPan({ maxScale: 4 });
@@ -234,6 +244,17 @@ export default function EventDetail() {
                   <Badge variant="outline" className="text-[10px] h-4 gap-1">
                     <CauseIcon className="h-3 w-3" />
                     {event.Event.Cause}
+                  </Badge>
+                );
+              })()}
+              {event.Event.Notes && event.Event.Notes.startsWith('detected:') && (() => {
+                const classList = event.Event.Notes.slice('detected:'.length).split('|')[0].trim();
+                if (!classList) return null;
+                const DetectIcon = getObjectClassIconFromList(classList);
+                return (
+                  <Badge variant="secondary" className="text-[10px] h-4 gap-1" data-testid="event-detail-detected-badge">
+                    <DetectIcon className="h-3 w-3 shrink-0" />
+                    <span className="truncate max-w-[120px] sm:max-w-none" title={classList}>{classList}</span>
                   </Badge>
                 );
               })()}

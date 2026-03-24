@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Download, Loader2 } from 'lucide-react';
 import { getEventCauseIcon } from '../../lib/event-icons';
+import { getObjectClassIconFromList } from '../../lib/object-class-icons';
 import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -171,11 +172,18 @@ export const EventMontageView = ({
                     </Badge>
                   );
                 })()}
-                {event.Notes && (
-                  <p className="text-[10px] text-muted-foreground truncate" title={event.Notes}>
-                    {event.Notes.split('|')[0].trim()}
-                  </p>
-                )}
+                {event.Notes && (() => {
+                  const noteText = event.Notes.split('|')[0].trim();
+                  const isDetection = noteText.startsWith('detected:');
+                  const classList = isDetection ? noteText.slice('detected:'.length) : '';
+                  const NoteIcon = isDetection && classList ? getObjectClassIconFromList(classList) : null;
+                  return (
+                    <p className="flex items-center gap-1 text-[10px] text-muted-foreground truncate" title={event.Notes}>
+                      {NoteIcon && <NoteIcon className="h-3 w-3 shrink-0" />}
+                      <span className="truncate">{noteText}</span>
+                    </p>
+                  );
+                })()}
                 {/* Tags */}
                 {eventTagMap && eventTagMap.get(event.Id) && (
                   <TagChipList

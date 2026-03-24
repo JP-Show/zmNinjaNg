@@ -14,6 +14,7 @@ import { Badge } from '../ui/badge';
 import { SecureImage } from '../ui/secure-image';
 import { Video, Calendar, Clock, Star } from 'lucide-react';
 import { getEventCauseIcon } from '../../lib/event-icons';
+import { getObjectClassIconFromList } from '../../lib/object-class-icons';
 import type { EventCardProps } from '../../api/types';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
@@ -179,11 +180,18 @@ function EventCardComponent({ event, monitorName, thumbnailUrl, objectFit = 'con
           </div>
 
           {/* Detection notes (strip everything after | which is redundant motion info) */}
-          {event.Notes && (
-            <div className="text-[10px] sm:text-xs text-muted-foreground truncate mt-1" title={event.Notes}>
-              {event.Notes.split('|')[0].trim()}
-            </div>
-          )}
+          {event.Notes && (() => {
+            const noteText = event.Notes.split('|')[0].trim();
+            const isDetection = noteText.startsWith('detected:');
+            const classList = isDetection ? noteText.slice('detected:'.length) : '';
+            const NoteIcon = isDetection && classList ? getObjectClassIconFromList(classList) : null;
+            return (
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground truncate mt-1" title={event.Notes}>
+                {NoteIcon && <NoteIcon className="h-3 w-3 shrink-0" />}
+                <span className="truncate">{noteText}</span>
+              </div>
+            );
+          })()}
 
           {/* Tags */}
           {tags && tags.length > 0 && (
