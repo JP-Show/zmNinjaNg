@@ -208,7 +208,7 @@ export function MonitorSettingsDialog({
                     onValueChange={setLocalCapturing}
                     disabled={!editable || isSaving}
                   >
-                    <SelectTrigger className="w-32 h-8" data-testid="settings-capturing-select">
+                    <SelectTrigger className="w-32 h-8 bg-blue-500/10" data-testid="settings-capturing-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -225,7 +225,7 @@ export function MonitorSettingsDialog({
                     onValueChange={setLocalAnalysing}
                     disabled={!editable || isSaving}
                   >
-                    <SelectTrigger className="w-32 h-8" data-testid="settings-analysing-select">
+                    <SelectTrigger className="w-32 h-8 bg-blue-500/10" data-testid="settings-analysing-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -241,7 +241,7 @@ export function MonitorSettingsDialog({
                     onValueChange={setLocalRecording}
                     disabled={!editable || isSaving}
                   >
-                    <SelectTrigger className="w-32 h-8" data-testid="settings-recording-select">
+                    <SelectTrigger className="w-32 h-8 bg-blue-500/10" data-testid="settings-recording-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -259,7 +259,7 @@ export function MonitorSettingsDialog({
                   onValueChange={(v) => setLocalFunction(v as MonitorFunction)}
                   disabled={!editable || isSaving}
                 >
-                  <SelectTrigger className="w-32 h-8" data-testid="settings-function-select">
+                  <SelectTrigger className="w-32 h-8 bg-blue-500/10" data-testid="settings-function-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -292,7 +292,7 @@ export function MonitorSettingsDialog({
                 onValueChange={setLocalSaveJPEGs}
                 disabled={!editable || isSaving}
               >
-                <SelectTrigger className="w-40 h-8" data-testid="settings-savejpegs-select">
+                <SelectTrigger className="w-40 h-8 bg-blue-500/10" data-testid="settings-savejpegs-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -310,7 +310,7 @@ export function MonitorSettingsDialog({
                 onValueChange={setLocalVideoWriter}
                 disabled={!editable || isSaving}
               >
-                <SelectTrigger className="w-40 h-8" data-testid="settings-videowriter-select">
+                <SelectTrigger className="w-40 h-8 bg-blue-500/10" data-testid="settings-videowriter-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -324,7 +324,7 @@ export function MonitorSettingsDialog({
             {onCycleSecondsChange && cycleSeconds !== undefined && (
               <SettingsRow label={t('monitor_detail.cycle_label')} testId="settings-cycle-row">
                 <Select value={String(cycleSeconds)} onValueChange={onCycleSecondsChange}>
-                  <SelectTrigger className="w-32 h-8" data-testid="monitor-detail-cycle-select">
+                  <SelectTrigger className="w-32 h-8 bg-blue-500/10" data-testid="monitor-detail-cycle-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -362,7 +362,7 @@ export function MonitorSettingsDialog({
                 value={localPath}
                 onChange={(e) => setLocalPath(e.target.value)}
                 disabled={!editable || isSaving}
-                className="mt-1.5 text-xs h-8 font-mono"
+                className="mt-1.5 text-xs h-8 font-mono bg-blue-500/10"
                 data-testid="settings-source-input"
               />
             </div>
@@ -373,7 +373,7 @@ export function MonitorSettingsDialog({
                 value={localUser}
                 onChange={(e) => setLocalUser(e.target.value)}
                 disabled={!editable || isSaving}
-                className="w-40 h-8 text-xs"
+                className="w-40 h-8 text-xs bg-blue-500/10"
                 data-testid="settings-username-input"
               />
             </SettingsRow>
@@ -384,7 +384,7 @@ export function MonitorSettingsDialog({
                 value={localPass}
                 onChange={(e) => setLocalPass(e.target.value)}
                 disabled={!editable || isSaving}
-                className="w-40 h-8 text-xs"
+                className="w-40 h-8 text-xs bg-blue-500/10"
                 data-testid="settings-password-input"
               />
             </SettingsRow>
@@ -396,7 +396,7 @@ export function MonitorSettingsDialog({
                 onValueChange={setLocalMethod}
                 disabled={!editable || isSaving}
               >
-                <SelectTrigger className="w-40 h-8" data-testid="settings-method-select">
+                <SelectTrigger className="w-40 h-8 bg-blue-500/10" data-testid="settings-method-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -427,7 +427,7 @@ export function MonitorSettingsDialog({
                 value={localMaxFPS}
                 onChange={(e) => setLocalMaxFPS(e.target.value)}
                 disabled={!editable || isSaving}
-                className="w-24 h-8 text-xs"
+                className="w-24 h-8 text-xs bg-blue-500/10"
                 data-testid="settings-maxfps-input"
               />
             </SettingsRow>
@@ -441,7 +441,7 @@ export function MonitorSettingsDialog({
                 value={localAlarmMaxFPS}
                 onChange={(e) => setLocalAlarmMaxFPS(e.target.value)}
                 disabled={!editable || isSaving}
-                className="w-24 h-8 text-xs"
+                className="w-24 h-8 text-xs bg-blue-500/10"
                 data-testid="settings-alarmmaxfps-input"
               />
             </SettingsRow>
@@ -453,7 +453,7 @@ export function MonitorSettingsDialog({
                 onValueChange={setLocalOrientation}
                 disabled={!editable || isSaving}
               >
-                <SelectTrigger className="w-40 h-8" data-testid="settings-orientation-select">
+                <SelectTrigger className="w-40 h-8 bg-blue-500/10" data-testid="settings-orientation-select">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -499,7 +499,7 @@ export function MonitorSettingsDialog({
                 value={localEventStartCmd}
                 onChange={(e) => setLocalEventStartCmd(e.target.value)}
                 disabled={!editable || isSaving}
-                className="mt-1.5 text-xs h-8 font-mono"
+                className="mt-1.5 text-xs h-8 font-mono bg-blue-500/10"
                 data-testid="settings-event-start-cmd-input"
               />
             </div>
@@ -511,7 +511,7 @@ export function MonitorSettingsDialog({
                 value={localEventEndCmd}
                 onChange={(e) => setLocalEventEndCmd(e.target.value)}
                 disabled={!editable || isSaving}
-                className="mt-1.5 text-xs h-8 font-mono"
+                className="mt-1.5 text-xs h-8 font-mono bg-blue-500/10"
                 data-testid="settings-event-end-cmd-input"
               />
             </div>
