@@ -31,27 +31,13 @@ function formatOrientation(orientation: string | null | undefined): string {
   return map[orientation] ?? orientation;
 }
 
-/** Fields that can be changed and sent on Save. */
-export interface MonitorSettingsChanges {
-  // ZM 1.38+
-  Capturing?: string;
-  Analysing?: string;
-  Recording?: string;
-  // Legacy
-  Function?: string;
-  // Both versions
-  Enabled?: string;
-  SaveJPEGs?: string;
-  VideoWriter?: string;
-}
-
 interface MonitorSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   monitor: Monitor;
   hasNewApi: boolean;
   /** Called with only the fields that changed when Save is pressed. */
-  onSave?: (changes: MonitorSettingsChanges) => Promise<void>;
+  onSave?: (changes: Record<string, string | undefined>) => Promise<void>;
   isSaving?: boolean;
   // Cycle settings (MonitorDetail only — local setting, not a ZM API field)
   cycleSeconds?: number;
@@ -100,10 +86,10 @@ export function MonitorSettingsDialog({
   const editable = !!onSave;
 
   // Local state for editable fields — reset when monitor changes or dialog opens
-  const [localCapturing, setLocalCapturing] = useState(monitor.Capturing ?? 'Always');
-  const [localAnalysing, setLocalAnalysing] = useState(monitor.Analysing ?? 'None');
-  const [localRecording, setLocalRecording] = useState(monitor.Recording ?? 'None');
-  const [localFunction, setLocalFunction] = useState(monitor.Function);
+  const [localCapturing, setLocalCapturing] = useState<string>(monitor.Capturing ?? 'Always');
+  const [localAnalysing, setLocalAnalysing] = useState<string>(monitor.Analysing ?? 'None');
+  const [localRecording, setLocalRecording] = useState<string>(monitor.Recording ?? 'None');
+  const [localFunction, setLocalFunction] = useState<string>(monitor.Function);
   const [localEnabled, setLocalEnabled] = useState(monitor.Enabled === '1' || monitor.Enabled === 'true');
   const [localSaveJPEGs, setLocalSaveJPEGs] = useState(monitor.SaveJPEGs ?? '0');
   const [localVideoWriter, setLocalVideoWriter] = useState(monitor.VideoWriter ?? '0');
@@ -135,7 +121,7 @@ export function MonitorSettingsDialog({
 
   const handleSave = async () => {
     if (!onSave) return;
-    const changes: MonitorSettingsChanges = {};
+    const changes: Record<string, string | undefined> = {};
 
     if (hasNewApi) {
       if (localCapturing !== (monitor.Capturing ?? 'Always')) changes.Capturing = localCapturing;

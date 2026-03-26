@@ -7,7 +7,6 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMonitors, updateMonitor } from '../api/monitors';
 import { getConsoleEvents } from '../api/events';
@@ -30,7 +29,6 @@ import { toast } from 'sonner';
 import { log, LogLevel } from '../lib/logger';
 export default function Monitors() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [selectedMonitor, setSelectedMonitor] = useState<Monitor | null>(null);
   const [showPropertiesDialog, setShowPropertiesDialog] = useState(false);
 
