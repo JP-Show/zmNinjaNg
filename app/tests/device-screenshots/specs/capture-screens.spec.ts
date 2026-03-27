@@ -119,11 +119,13 @@ async function login(): Promise<void> {
   // Dismiss kiosk overlay if present from a previous test run
   await dismissKioskOverlay();
 
-  // Check if already logged in
+  // Check if already logged in — sidebar nav on desktop, mobile menu on phones
   const navVisible = await $('[data-testid="nav-item-dashboard"]')
     .isDisplayed().catch(() => false);
+  const mobileMenuVisible = await $('[data-testid="mobile-menu-button"]')
+    .isDisplayed().catch(() => false);
 
-  if (navVisible) return;
+  if (navVisible || mobileMenuVisible) return;
 
   // Fill login form
   const { host, username, password } = testConfig.server;
@@ -160,11 +162,15 @@ async function login(): Promise<void> {
     }
     await connectBtn.click();
 
-    // Wait for login to complete
+    // Wait for login to complete — on phones the sidebar is hidden,
+    // so check for either nav items (desktop) or the mobile menu button
     await browser.waitUntil(
       async () => {
         const nav = await $('[data-testid^="nav-item-"]');
-        return nav.isDisplayed().catch(() => false);
+        const mobileMenu = await $('[data-testid="mobile-menu-button"]');
+        const navVisible = await nav.isDisplayed().catch(() => false);
+        const menuVisible = await mobileMenu.isDisplayed().catch(() => false);
+        return navVisible || menuVisible;
       },
       { timeout: 30000 },
     );
