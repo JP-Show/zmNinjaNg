@@ -10,6 +10,8 @@
 
 <img src="app/assets/logo.png" align="right" width="120" />
 
+**[Documentation](https://zmninjang.readthedocs.io/en/latest/)**
+
 A modern web and mobile application for ZoneMinder, providing a clean, intuitive interface for viewing live camera feeds, reviewing events, and managing multiple server profiles. It is a ground-up rewrite of the original [zmNinja](https://zmninja.zoneminder.com/) application, using modern web technologies and a more intuitive user interface. 
 
 Watch a video of the demo [HERE](https://youtu.be/ces_2ap-htc)
