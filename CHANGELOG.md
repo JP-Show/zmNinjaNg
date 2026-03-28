@@ -1,5 +1,14 @@
 # Changelog
 
+## [zmNinjaNG-1.1.4](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.1.4) (2026-03-28)
+
+[Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.1.3...zmNinjaNG-1.1.4)
+
+**Implemented enhancements:**
+
+- feat: redesign monitor settings dialog with ZM 1.38+ support [\#85](https://github.com/pliablepixels/zmNinjaNG/issues/85)
+- feat: cross-platform E2E test overhaul with real device testing [\#84](https://github.com/pliablepixels/zmNinjaNG/issues/84)
+
 ## [zmNinjaNG-1.1.3](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.1.3) (2026-03-22)
 
 [Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.1.2...zmNinjaNG-1.1.3)
