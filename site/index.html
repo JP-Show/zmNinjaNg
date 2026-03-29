@@ -492,11 +492,69 @@
   </div>
 
   <!-- Gallery -->
+  <section class="section section-alt">
+    <div class="section-inner">
+      <p class="section-label">Screenshots</p>
+      <h2 class="section-title">See it in action</h2>
+      <p class="section-desc">zmNinjaNG on iPhone — framed with care.</p>
+    </div>
+    <div class="gallery-container" style="margin-top: 40px;">
+      <button class="gallery-nav prev" onclick="scrollGallery(-1)" aria-label="Previous">
+        <i data-lucide="chevron-left"></i>
+      </button>
+      <div class="gallery-track" id="galleryTrack">
+        <img src="images/1.png" alt="zmNinjaNG sidebar navigation" onclick="openLightbox(this.src)">
+        <img src="images/2.png" alt="zmNinjaNG notification settings" onclick="openLightbox(this.src)">
+        <img src="images/3.png" alt="zmNinjaNG montage dark theme" onclick="openLightbox(this.src)">
+        <img src="images/4.png" alt="zmNinjaNG dashboard with heatmap" onclick="openLightbox(this.src)">
+        <img src="images/5.png" alt="zmNinjaNG event detail" onclick="openLightbox(this.src)">
+        <img src="images/6.png" alt="zmNinjaNG language selection" onclick="openLightbox(this.src)">
+        <img src="images/7.png" alt="zmNinjaNG live monitors" onclick="openLightbox(this.src)">
+        <img src="images/8.png" alt="zmNinjaNG montage light theme" onclick="openLightbox(this.src)">
+        <img src="images/9.png" alt="zmNinjaNG event montage with filters" onclick="openLightbox(this.src)">
+      </div>
+      <button class="gallery-nav next" onclick="scrollGallery(1)" aria-label="Next">
+        <i data-lucide="chevron-right"></i>
+      </button>
+    </div>
+  </section>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" aria-label="Close">&times;</button>
+    <img id="lightboxImg" src="" alt="Enlarged screenshot">
+  </div>
 
   <!-- Platforms -->
 
   <!-- Footer -->
 
-  <script>lucide.createIcons();</script>
+  <script>
+    function scrollGallery(direction) {
+      var track = document.getElementById('galleryTrack');
+      var scrollAmount = track.clientWidth * 0.6;
+      track.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+    }
+
+    function openLightbox(src) {
+      var lightbox = document.getElementById('lightbox');
+      var img = document.getElementById('lightboxImg');
+      img.src = src;
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      var lightbox = document.getElementById('lightbox');
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    lucide.createIcons();
+  </script>
 </body>
 </html>
