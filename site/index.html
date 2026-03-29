@@ -36,6 +36,58 @@
     a { color: var(--fg); text-decoration: none; }
     img { max-width: 100%; height: auto; }
 
+    /* === Top Nav === */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: hsla(220, 20%, 12%, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 5%;
+    }
+
+    .top-nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .top-nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .top-nav-brand img {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+    }
+
+    .top-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .top-nav-links a {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .top-nav-links a:hover { color: var(--fg); }
+
     /* === Hero === */
     .hero {
       width: 100%;
@@ -421,6 +473,8 @@
 
     /* === Responsive === */
     @media (max-width: 768px) {
+      .top-nav-links { gap: 16px; }
+      .top-nav-links a { font-size: 0.8rem; }
       .hero { padding: 60px 5% 40px; min-height: auto; }
       .hero-inner { flex-direction: column; gap: 40px; text-align: center; }
       .hero-text { display: flex; flex-direction: column; align-items: center; }
@@ -444,6 +498,21 @@
   </style>
 </head>
 <body>
+
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="top-nav-inner">
+      <div class="top-nav-brand">
+        <img src="logo.png" alt="zmNinjaNG">
+        <span>zmNinjaNG</span>
+      </div>
+      <div class="top-nav-links">
+        <a href="https://zmninjang.readthedocs.io/en/latest/">Documentation</a>
+        <a href="https://github.com/pliablepixels/zmNinjaNG">GitHub</a>
+        <a href="https://github.com/pliablepixels/zmNinjaNG/releases">Releases</a>
+      </div>
+    </div>
+  </nav>
 
   <section class="hero">
     <div class="hero-inner">
@@ -657,12 +726,6 @@
   <footer>
     <div class="footer-inner">
       <img src="logo.png" alt="zmNinjaNG" class="footer-logo">
-      <div class="footer-links">
-        <a href="https://zmninjang.readthedocs.io/en/latest/">Documentation</a>
-        <a href="https://github.com/pliablepixels/zmNinjaNG">GitHub</a>
-        <a href="https://github.com/pliablepixels/zmNinjaNG/releases">Releases</a>
-        <a href="https://youtu.be/ces_2ap-htc" target="_blank" rel="noopener">Watch Demo</a>
-      </div>
       <p class="footer-copy">&copy; 2026 zmNinjaNG. A modern client for ZoneMinder.</p>
     </div>
   </footer>
