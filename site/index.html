@@ -529,11 +529,11 @@
           </a>
         </div>
       </div>
-      <div class="hero-screenshot">
-        <img src="images/2.png" alt="zmNinjaNG Dashboard">
-        <a href="https://youtu.be/ces_2ap-htc" target="_blank" rel="noopener" class="play-overlay" aria-label="Watch demo video">
+      <div class="hero-screenshot" id="heroMedia">
+        <img src="images/2.png" alt="zmNinjaNG Dashboard" id="heroImg">
+        <button class="play-overlay" aria-label="Play demo video" onclick="playDemo()">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><polygon points="5,3 19,12 5,21"></polygon></svg>
-        </a>
+        </button>
       </div>
     </div>
   </section>
@@ -722,6 +722,21 @@
   </footer>
 
   <script>
+    function playDemo() {
+      var container = document.getElementById('heroMedia');
+      var video = document.createElement('video');
+      video.src = 'demo.mp4';
+      video.controls = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.style.maxHeight = '600px';
+      video.style.width = 'auto';
+      video.style.borderRadius = '16px';
+      video.style.filter = 'drop-shadow(0 20px 60px rgba(0, 0, 0, 0.5))';
+      container.innerHTML = '';
+      container.appendChild(video);
+    }
+
     function scrollFeatures(direction) {
       var track = document.getElementById('featuresTrack');
       var scrollAmount = track.clientWidth * 0.6;
