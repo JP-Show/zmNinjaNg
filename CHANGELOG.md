@@ -1,5 +1,18 @@
 # Changelog
 
+## [zmNinjaNG-1.1.5](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.1.5) (2026-03-30)
+
+[Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.1.4...zmNinjaNG-1.1.5)
+
+**Implemented enhancements:**
+
+- feat: drag-to-reorder monitors in dashboard widget editor [\#91](https://github.com/pliablepixels/zmNinjaNG/issues/91)
+- feat: add grid view option to monitors list [\#90](https://github.com/pliablepixels/zmNinjaNG/issues/90)
+- chore: shorten i18n labels for mobile [\#89](https://github.com/pliablepixels/zmNinjaNG/issues/89)
+- feat: show event thumbnail on timeline hover [\#88](https://github.com/pliablepixels/zmNinjaNG/issues/88)
+- feat: replace Function label with icons for Capturing/Analysing/Recording [\#87](https://github.com/pliablepixels/zmNinjaNG/issues/87)
+- feat: consistent monitor card thumbnail layout [\#86](https://github.com/pliablepixels/zmNinjaNG/issues/86)
+
 ## [zmNinjaNG-1.1.4](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.1.4) (2026-03-28)
 
 [Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.1.3...zmNinjaNG-1.1.4)
