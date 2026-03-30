@@ -180,19 +180,19 @@ function MonitorCardComponent({
             {monitor.Capturing !== undefined ? (
               <>
                 <div className="flex items-center gap-1" title={t('monitors.capturing')}>
-                  <Video className="h-3 w-3" />
+                  <Video className="h-3 w-3" /><span className="text-[10px]">Cap</span>
                   <Badge variant={monitor.Capturing === 'None' ? 'outline' : 'secondary'} className="font-mono text-xs">
                     {monitor.Capturing}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1" title={t('monitors.analysing')}>
-                  <Eye className="h-3 w-3" />
+                  <Eye className="h-3 w-3" /><span className="text-[10px]">Anl</span>
                   <Badge variant={monitor.Analysing === 'None' ? 'outline' : 'secondary'} className="font-mono text-xs">
                     {monitor.Analysing}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1" title={t('monitors.recording')}>
-                  <Disc className="h-3 w-3" />
+                  <Disc className="h-3 w-3" /><span className="text-[10px]">Rec</span>
                   <Badge variant={monitor.Recording === 'None' ? 'outline' : 'secondary'} className="font-mono text-xs">
                     {monitor.Recording}
                   </Badge>

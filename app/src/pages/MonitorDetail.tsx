@@ -260,9 +260,9 @@ export default function MonitorDetail() {
             <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground ml-3">
               {is138Plus ? (
                 <>
-                  <span className="flex items-center gap-0.5" title={t('monitors.capturing')}><Video className="h-2.5 w-2.5" />{monitor.Monitor.Capturing}</span>
-                  <span className="flex items-center gap-0.5" title={t('monitors.analysing')}><Eye className="h-2.5 w-2.5" />{monitor.Monitor.Analysing}</span>
-                  <span className="flex items-center gap-0.5" title={t('monitors.recording')}><Disc className="h-2.5 w-2.5" />{monitor.Monitor.Recording}</span>
+                  <span className="flex items-center gap-0.5" title={t('monitors.capturing')}><Video className="h-2.5 w-2.5" />Cap: {monitor.Monitor.Capturing}</span>
+                  <span className="flex items-center gap-0.5" title={t('monitors.analysing')}><Eye className="h-2.5 w-2.5" />Anl: {monitor.Monitor.Analysing}</span>
+                  <span className="flex items-center gap-0.5" title={t('monitors.recording')}><Disc className="h-2.5 w-2.5" />Rec: {monitor.Monitor.Recording}</span>
                 </>
               ) : (
                 <span className="flex items-center gap-0.5" title={t('monitors.function')}><Video className="h-2.5 w-2.5" />{monitor.Monitor.Function}</span>
