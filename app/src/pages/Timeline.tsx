@@ -1,8 +1,11 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getEvents } from '../api/events';
+import { getEvents, getEventImageUrl } from '../api/events';
+import { getEventTags } from '../api/tags';
 import { getMonitors } from '../api/monitors';
+import { useCurrentProfile } from '../hooks/useCurrentProfile';
+import { useAuthStore } from '../stores/auth';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -41,6 +44,9 @@ export default function Timeline() {
   const { t } = useTranslation();
   const timelineRef = useRef<HTMLDivElement>(null);
   const timelineInstance = useRef<VisTimeline | null>(null);
+  const { currentProfile } = useCurrentProfile();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const portalUrl = currentProfile?.portalUrl || '';
 
   const {
     selectedMonitorIds, startDateInput, endDateInput, onlyDetectedObjects,
@@ -88,6 +94,14 @@ export default function Timeline() {
         direction: 'desc',
         limit: 500,
       }),
+  });
+
+  // Fetch tags for timeline events
+  const eventIds = useMemo(() => data?.events?.map(e => e.Event.Id) || [], [data]);
+  const { data: eventTagMap } = useQuery({
+    queryKey: ['timeline-event-tags', eventIds],
+    queryFn: () => getEventTags(eventIds),
+    enabled: eventIds.length > 0,
   });
 
   // Initialize and update timeline
@@ -160,7 +174,14 @@ export default function Timeline() {
             <span style="opacity: 0.8;">•</span>
             <span>${durationText}</span>
           </div>`,
-          title: `<strong>${escapeHtml(Event.Name)}</strong>\n━━━━━━━━━━━━━━━\n${t('timeline.tooltip_cause')}: ${escapeHtml(Event.Cause)}\n${t('timeline.tooltip_time')}: ${format(startTime, 'HH:mm:ss')}\n${t('timeline.tooltip_duration')}: ${durationText}\n${t('timeline.tooltip_frames_total')}: ${Event.Frames} total\n${t('timeline.tooltip_alarm_frames')}: ${Event.AlarmFrames}\n${t('timeline.tooltip_score')}: ${Event.MaxScore}`,
+          title: (() => {
+            const tags = eventTagMap?.get(Event.Id)?.map(t => t.Name).join(', ') || '';
+            return `<div style="text-align:center;margin-bottom:4px;">
+              <img src="${getEventImageUrl(portalUrl, Event.Id, 'snapshot', { token: accessToken || undefined, width: 160 })}" style="max-width:150px;border-radius:4px;" />
+            </div>
+            <strong>${escapeHtml(Event.Name)}</strong><br/>
+            ${escapeHtml(Event.Cause)} &middot; ${format(startTime, 'HH:mm:ss')} &middot; ${durationText}${Event.Notes ? '<br/>' + escapeHtml(Event.Notes) : ''}${tags ? '<br/>🏷️ ' + escapeHtml(tags) : ''}`;
+          })(),
           style: `
             background: linear-gradient(135deg, ${color.bg} 0%, ${color.bg}dd 100%);
             border-color: ${color.border};
@@ -232,7 +253,7 @@ export default function Timeline() {
         timelineInstance.current = null;
       }
     };
-  }, [data, enabledMonitors, navigate, startDate, endDate]);
+  }, [data, enabledMonitors, navigate, startDate, endDate, portalUrl, accessToken, eventTagMap]);
 
   // Note: cleanup on unmount is handled by the effect above (its return fn)
 

@@ -114,10 +114,11 @@
   border-radius: 8px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
   color: hsl(var(--popover-foreground)) !important;
-  font-size: 13px !important;
-  padding: 8px 12px !important;
-  white-space: pre-line !important;
-  max-width: 300px !important;
+  font-size: 10px !important;
+  padding: 10px !important;
+  white-space: normal !important;
+  max-width: 250px !important;
+  line-height: 1.4 !important;
 }
 
 /* Range items (events with duration) */
