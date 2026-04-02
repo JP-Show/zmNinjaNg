@@ -116,11 +116,12 @@ function TimelineScrubberComponent({
   const [handleNorm, setHandleNorm] = useState(initialState?.handleNorm ?? 0.5);
   const [activeEvents, setActiveEvents] = useState<TimelineEvent[]>([]);
 
-  // Restore initial state on mount
-  const restoredRef = useRef(false);
+  // Restore state when initialState changes (e.g., navigating back)
+  const lastRestoredRef = useRef<ScrubberState | null>(null);
   useEffect(() => {
-    if (restoredRef.current || !initialState || events.length === 0) return;
-    restoredRef.current = true;
+    if (!initialState || events.length === 0) return;
+    if (lastRestoredRef.current === initialState) return;
+    lastRestoredRef.current = initialState;
     const ids = new Set(initialState.activeEventIds);
     const restored = events.filter((ev) => ids.has(ev.id));
     if (restored.length > 0) {

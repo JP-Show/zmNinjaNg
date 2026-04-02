@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getEvents } from '../api/events';
 import type { EventData } from '../api/types';
 import { getMonitors } from '../api/monitors';
@@ -34,6 +34,7 @@ import type { ScrubberState } from '../components/timeline/TimelineScrubber';
 
 export default function Timeline() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const {
     selectedMonitorIds, startDateInput, endDateInput, onlyDetectedObjects,
@@ -57,20 +58,21 @@ export default function Timeline() {
   const [zoomInKey, setZoomInKey] = useState(0);
   const [zoomOutKey, setZoomOutKey] = useState(0);
 
-  // Scrubber state — persisted to sessionStorage so it survives browser back
+  // Scrubber state — persisted to sessionStorage so it survives any back navigation
   const SCRUBBER_KEY = 'timeline-scrubber-state';
   const scrubberStateRef = useRef<ScrubberState | null>(null);
+  const [initialScrubberState, setInitialScrubberState] = useState<ScrubberState | null>(null);
 
-  const [initialScrubberState] = useState<ScrubberState | null>(() => {
+  // Re-check sessionStorage on every navigation to this page (location.key changes)
+  useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCRUBBER_KEY);
       if (saved) {
-        sessionStorage.removeItem(SCRUBBER_KEY); // one-time restore
-        return JSON.parse(saved);
+        sessionStorage.removeItem(SCRUBBER_KEY);
+        setInitialScrubberState(JSON.parse(saved));
       }
     } catch { /* ignore */ }
-    return null;
-  });
+  }, [location.key]);
 
   const handleScrubberStateChange = useCallback((state: ScrubberState | null) => {
     scrubberStateRef.current = state;
