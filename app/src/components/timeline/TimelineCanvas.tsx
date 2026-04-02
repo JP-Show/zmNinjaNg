@@ -9,7 +9,7 @@ import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineGestures } from './useTimelineGestures';
 import { renderTimeline, type MonitorRow, type RenderViewport } from './timeline-renderer';
 import { hitTest } from './timeline-hit-test';
-import { canvasHeight, type TimelineEvent } from './timeline-layout';
+import { canvasHeight, LAYOUT, getMonitorColor, type TimelineEvent } from './timeline-layout';
 
 interface TimelineCanvasProps {
   monitors: MonitorRow[];
@@ -147,13 +147,36 @@ const TimelineCanvasInner = ({
   return (
     <div
       ref={containerRef}
-      className="w-full overflow-hidden rounded-lg border border-border bg-background"
+      className="relative w-full overflow-hidden rounded-lg border border-border bg-background"
     >
       <canvas
         ref={canvasRef}
         className="w-full"
         data-testid="timeline-canvas"
       />
+      {/* Monitor name sidebar */}
+      <div
+        className="absolute left-0 z-10 pointer-events-none"
+        style={{ top: LAYOUT.headerHeight }}
+        data-testid="timeline-monitor-labels"
+      >
+        {monitors.map((monitor, index) => (
+          <div
+            key={monitor.id}
+            className="flex items-center gap-1.5 px-2 pointer-events-auto"
+            style={{ height: LAYOUT.rowHeight }}
+            title={monitor.name}
+          >
+            <span
+              className="h-2 w-2 rounded-full shrink-0"
+              style={{ backgroundColor: getMonitorColor(index) }}
+            />
+            <span className="text-xs text-muted-foreground truncate max-w-24">
+              {monitor.name}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
