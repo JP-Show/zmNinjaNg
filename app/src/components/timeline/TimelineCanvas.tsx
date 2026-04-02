@@ -3,7 +3,7 @@
  * the viewport, gestures, rendering, and hit-testing.
  */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTimelineViewport } from './useTimelineViewport';
 import { useTimelineGestures } from './useTimelineGestures';
@@ -65,35 +65,26 @@ const TimelineCanvasInner = ({
     }
   }, [resetKey, startMs, endMs, viewport]);
 
-  // Zoom in/out centered on event midpoint
-  const eventMidMs = useMemo(() => {
-    if (events.length === 0) return (startMs + endMs) / 2;
-    let min = Infinity;
-    let max = -Infinity;
-    for (const ev of events) {
-      if (ev.startMs < min) min = ev.startMs;
-      if (ev.endMs > max) max = ev.endMs;
-    }
-    return (min + max) / 2;
-  }, [events, startMs, endMs]);
-
+  // Zoom in/out keeping current center
   const prevZoomInRef = useRef(zoomInKey);
   useEffect(() => {
     if (zoomInKey !== undefined && zoomInKey !== prevZoomInRef.current) {
       prevZoomInRef.current = zoomInKey;
+      const mid = (viewport.startMs + viewport.endMs) / 2;
       const dur = viewport.durationMs * 0.5;
-      viewport.animateToRange(eventMidMs - dur / 2, eventMidMs + dur / 2);
+      viewport.animateToRange(mid - dur / 2, mid + dur / 2);
     }
-  }, [zoomInKey, viewport, eventMidMs]);
+  }, [zoomInKey, viewport]);
 
   const prevZoomOutRef = useRef(zoomOutKey);
   useEffect(() => {
     if (zoomOutKey !== undefined && zoomOutKey !== prevZoomOutRef.current) {
       prevZoomOutRef.current = zoomOutKey;
+      const mid = (viewport.startMs + viewport.endMs) / 2;
       const dur = viewport.durationMs * 2;
-      viewport.animateToRange(eventMidMs - dur / 2, eventMidMs + dur / 2);
+      viewport.animateToRange(mid - dur / 2, mid + dur / 2);
     }
-  }, [zoomOutKey, viewport, eventMidMs]);
+  }, [zoomOutKey, viewport]);
 
   // Observe container width
   useEffect(() => {
