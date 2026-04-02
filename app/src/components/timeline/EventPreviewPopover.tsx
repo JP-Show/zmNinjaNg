@@ -1,0 +1,116 @@
+/**
+ * EventPreviewPopover
+ *
+ * Fixed-position popover shown when an event bar is clicked/tapped
+ * on the timeline canvas. Shows a snapshot, metadata, and action buttons.
+ */
+
+import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ExternalLink, Clock, AlertTriangle, X } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { Button } from '../ui/button';
+import { getEventImageUrl } from '../../api/events';
+import { useCurrentProfile } from '../../hooks/useCurrentProfile';
+import { useAuthStore } from '../../stores/auth';
+
+interface EventPreviewPopoverProps {
+  event: {
+    id: string;
+    monitorId: string;
+    cause: string;
+    startDateTime: string;
+    duration: string;
+    alarmFrames: string;
+    notes: string | null;
+    monitorName: string;
+  };
+  position: { x: number; y: number };
+  onOpenEvent: (eventId: string) => void;
+  onClose: () => void;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${mins}m ${secs}s`;
+}
+
+export const EventPreviewPopover = memo(function EventPreviewPopover({
+  event,
+  position,
+  onOpenEvent,
+  onClose,
+}: EventPreviewPopoverProps) {
+  const { t } = useTranslation();
+  const { currentProfile } = useCurrentProfile();
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  const portalUrl = currentProfile?.portalUrl ?? '';
+  const imageUrl = getEventImageUrl(portalUrl, event.id, 'objdetect', {
+    token: accessToken ?? undefined,
+  });
+
+  const startTime = format(parseISO(event.startDateTime.replace(' ', 'T')), 'HH:mm:ss');
+  const duration = formatDuration(parseFloat(event.duration) || 0);
+
+  return (
+    <div
+      className="fixed z-50 w-72 rounded-lg border bg-popover text-popover-foreground shadow-xl animate-in fade-in-0 zoom-in-95"
+      style={{
+        left: Math.min(position.x, window.innerWidth - 300),
+        top: position.y + 12,
+      }}
+      data-testid="event-preview-popover"
+    >
+      <img
+        src={imageUrl}
+        alt=""
+        className="aspect-video bg-black rounded-t-lg overflow-hidden object-contain w-full"
+      />
+      <div className="p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-medium text-sm truncate min-w-0" title={event.monitorName}>
+            {event.monitorName}
+          </span>
+          <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
+            <AlertTriangle className="h-3 w-3" />
+            {event.cause}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {startTime}
+          </span>
+          <span>{duration}</span>
+          <span>{event.alarmFrames} frames</span>
+        </div>
+        {event.notes && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{event.notes}</p>
+        )}
+        <div className="flex items-center gap-2 pt-1">
+          <Button
+            size="sm"
+            className="text-xs h-7 flex-1"
+            onClick={() => onOpenEvent(event.id)}
+            data-testid="event-preview-open"
+          >
+            <ExternalLink className="h-3 w-3 mr-1" />
+            {t('timeline.open_event')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs h-7"
+            onClick={onClose}
+          >
+            <X className="h-3 w-3 mr-1" />
+            {t('common.close')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
