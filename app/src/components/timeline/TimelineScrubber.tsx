@@ -260,8 +260,9 @@ function TimelineScrubberComponent({
 
         {/* Draggable handle */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full bg-amber-500 border-2 border-background shadow-lg transition-transform"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-7 h-7 rounded-full border-2 border-background shadow-lg transition-transform"
           style={{
+            backgroundColor: '#00a8ff',
             left: `${handleNorm * 100}%`,
             transform: `translate(-50%, -50%) scale(${scrubbing ? 1.2 : 1})`,
           }}
