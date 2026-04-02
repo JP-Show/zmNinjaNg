@@ -440,61 +440,16 @@ export default function Timeline() {
         />
       )}
 
-      {/* Event Statistics */}
+      {/* Event Statistics — compact inline */}
       {data?.events && data.events.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="timeline-statistics">
-          <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">{data.events.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">{t('timeline.total_events')}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-600">{activeMonitorCount}</div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">{t('timeline.active_monitors')}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-amber-600">{totalAlarmFrames.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">{t('timeline.alarm_frames')}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
-                  <AlertCircle className="h-6 w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-purple-600">{totalDurationMins}m</div>
-                  <p className="text-xs text-muted-foreground mt-1 font-medium">{t('timeline.total_duration')}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground" data-testid="timeline-statistics">
+          <span><span className="font-semibold text-blue-500">{data.events.length}</span> {t('timeline.total_events')}</span>
+          <span className="text-border">|</span>
+          <span><span className="font-semibold text-green-500">{activeMonitorCount}</span> {t('timeline.active_monitors')}</span>
+          <span className="text-border">|</span>
+          <span><span className="font-semibold text-amber-500">{totalAlarmFrames.toLocaleString()}</span> {t('timeline.alarm_frames')}</span>
+          <span className="text-border">|</span>
+          <span><span className="font-semibold text-purple-500">{totalDurationMins}m</span> {t('timeline.total_duration')}</span>
         </div>
       )}
     </div>
