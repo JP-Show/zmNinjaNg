@@ -932,7 +932,8 @@
     "play_event": "Abspielen",
     "events_loaded": "{{count}} Ereignisse",
     "pinch_to_zoom": "Scrollen zum Zoomen, Ziehen zum Bewegen",
-    "no_events_in_range": "Keine Ereignisse in diesem Zeitraum"
+    "no_events_in_range": "Keine Ereignisse in diesem Zeitraum",
+    "center_view": "Zentrieren"
   },
   "error": {
     "something_went_wrong": "Etwas ist schief gelaufen",

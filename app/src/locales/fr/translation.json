@@ -932,7 +932,8 @@
     "play_event": "Lire",
     "events_loaded": "{{count}} événements",
     "pinch_to_zoom": "Défiler pour zoomer, glisser pour naviguer",
-    "no_events_in_range": "Aucun événement dans cette période"
+    "no_events_in_range": "Aucun événement dans cette période",
+    "center_view": "Centrer"
   },
   "error": {
     "something_went_wrong": "Quelque chose s'est mal passé",

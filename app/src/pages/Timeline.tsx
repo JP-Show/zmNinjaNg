@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
-import { RefreshCw, Filter, Activity, AlertCircle, Clock, ScanSearch, X } from 'lucide-react';
+import { RefreshCw, Filter, Activity, AlertCircle, Clock, ScanSearch, X, Crosshair } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { filterEnabledMonitors } from '../lib/filters';
 import { formatForServer } from '../lib/time';
@@ -50,6 +50,9 @@ export default function Timeline() {
 
   // Detection filter state
   const [detectionCategory, setDetectionCategory] = useState<DetectionCategory>('all');
+
+  // Reset key — increment to re-center the viewport
+  const [resetKey, setResetKey] = useState(0);
 
   // Event preview popover state
   const [selectedEvent, setSelectedEvent] = useState<{
@@ -396,14 +399,28 @@ export default function Timeline() {
             </div>
           ) : (
             <div className="p-4" data-testid="timeline-content">
-              <div className="mb-2 text-xs text-muted-foreground text-right">
-                {t('timeline.pinch_to_zoom')}
+              <div className="mb-2 flex items-center justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-muted-foreground"
+                  onClick={() => setResetKey((k) => k + 1)}
+                  title={t('timeline.center_view')}
+                  data-testid="timeline-center-button"
+                >
+                  <Crosshair className="h-3.5 w-3.5 mr-1" />
+                  {t('timeline.center_view')}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {t('timeline.pinch_to_zoom')}
+                </span>
               </div>
               <TimelineCanvas
                 monitors={monitorRows}
                 events={filteredEvents}
                 startMs={startMs}
                 endMs={endMs}
+                resetKey={resetKey}
                 onEventClick={handleEventClick}
                 onEventHover={handleEventHover}
               />

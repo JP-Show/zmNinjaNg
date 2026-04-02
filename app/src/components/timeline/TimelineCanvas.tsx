@@ -16,6 +16,8 @@ interface TimelineCanvasProps {
   events: TimelineEvent[];
   startMs: number;
   endMs: number;
+  /** Increment to force viewport reset to startMs/endMs */
+  resetKey?: number;
   onEventClick: (event: TimelineEvent) => void;
   onEventHover: (event: TimelineEvent | null, x: number, y: number) => void;
 }
@@ -27,6 +29,7 @@ const TimelineCanvasInner = ({
   events,
   startMs,
   endMs,
+  resetKey,
   onEventClick,
   onEventHover,
 }: TimelineCanvasProps) => {
@@ -46,6 +49,15 @@ const TimelineCanvasInner = ({
       viewport.setRange(startMs, endMs);
     }
   }, [startMs, endMs, viewport]);
+
+  // Reset viewport when resetKey changes (center/fit button)
+  const prevResetKeyRef = useRef(resetKey);
+  useEffect(() => {
+    if (resetKey !== undefined && resetKey !== prevResetKeyRef.current) {
+      prevResetKeyRef.current = resetKey;
+      viewport.setRange(startMs, endMs);
+    }
+  }, [resetKey, startMs, endMs, viewport]);
 
   // Observe container width
   useEffect(() => {

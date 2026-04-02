@@ -932,7 +932,8 @@
     "play_event": "Play",
     "events_loaded": "{{count}} events",
     "pinch_to_zoom": "Scroll to zoom, drag to pan",
-    "no_events_in_range": "No events in this time range"
+    "no_events_in_range": "No events in this time range",
+    "center_view": "Center"
   },
   "error": {
     "something_went_wrong": "Something went wrong",

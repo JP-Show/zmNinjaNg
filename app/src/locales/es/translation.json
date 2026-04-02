@@ -932,7 +932,8 @@
     "play_event": "Reproducir",
     "events_loaded": "{{count}} eventos",
     "pinch_to_zoom": "Desplazar para zoom, arrastrar para mover",
-    "no_events_in_range": "Sin eventos en este rango"
+    "no_events_in_range": "Sin eventos en este rango",
+    "center_view": "Centrar"
   },
   "error": {
     "something_went_wrong": "Algo salió mal",
