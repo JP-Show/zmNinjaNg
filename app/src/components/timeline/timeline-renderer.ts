@@ -35,6 +35,8 @@ export interface MonitorRow {
 export interface TickMark {
   timeMs: number;
   label: string;
+  /** Day/date label for major ticks (shown above the time label). */
+  majorLabel?: string;
   isMajor: boolean;
 }
 
@@ -142,7 +144,15 @@ const TICK_INTERVALS: TickInterval[] = [
   },
 ];
 
-const MIN_TICK_SPACING_PX = 80;
+/** Minimum pixel gap between the right edge of one label and the left edge of the next. */
+const MIN_LABEL_GAP_PX = 16;
+/** Approximate character width in pixels at LAYOUT.fontSize. */
+const CHAR_WIDTH_PX = 7;
+
+function estimateLabelWidth(tick: TickMark): number {
+  const text = tick.majorLabel ?? tick.label;
+  return text.length * CHAR_WIDTH_PX;
+}
 
 export function computeTicks(
   startMs: number,
@@ -152,37 +162,40 @@ export function computeTicks(
   const range = endMs - startMs;
   const interval = TICK_INTERVALS.find((i) => range <= i.maxRange)!;
 
-  const maxTicks = Math.max(1, Math.floor(widthPx / MIN_TICK_SPACING_PX));
-  const ticks: TickMark[] = [];
-
+  // Generate all ticks in the range (cap at 500 to avoid runaway)
+  const allTicks: TickMark[] = [];
   let cursor = interval.start(new Date(startMs));
-  // Walk from the aligned start until we pass the end
-  while (cursor.getTime() <= endMs && ticks.length < maxTicks * 2) {
+  while (cursor.getTime() <= endMs && allTicks.length < 500) {
     const t = cursor.getTime();
     if (t >= startMs) {
       const isMajor = interval.majorTest(cursor);
-      const label =
-        isMajor && interval.majorLabel
-          ? interval.majorLabel(cursor)
-          : interval.labelFn(cursor);
-      ticks.push({ timeMs: t, label, isMajor });
+      allTicks.push({
+        timeMs: t,
+        label: interval.labelFn(cursor),
+        majorLabel: isMajor && interval.majorLabel ? interval.majorLabel(cursor) : undefined,
+        isMajor,
+      });
     }
     cursor = interval.step(cursor);
   }
 
-  // If we have too many ticks, thin them keeping majors
-  if (ticks.length > maxTicks) {
-    const step = Math.ceil(ticks.length / maxTicks);
-    const thinned: TickMark[] = [];
-    for (let i = 0; i < ticks.length; i++) {
-      if (ticks[i].isMajor || i % step === 0) {
-        thinned.push(ticks[i]);
-      }
+  // Remove overlapping labels: greedily keep ticks whose labels don't collide
+  const msPerPx = range / widthPx;
+  const result: TickMark[] = [];
+  let lastRightPx = -Infinity;
+
+  for (const tick of allTicks) {
+    const centerPx = (tick.timeMs - startMs) / msPerPx;
+    const halfWidth = estimateLabelWidth(tick) / 2;
+    const leftPx = centerPx - halfWidth;
+
+    if (leftPx >= lastRightPx + MIN_LABEL_GAP_PX) {
+      result.push(tick);
+      lastRightPx = centerPx + halfWidth;
     }
-    return thinned;
   }
 
-  return ticks;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,11 +226,23 @@ export function drawTimeAxis(
     ctx.stroke();
 
     // Label
-    ctx.fillStyle = tick.isMajor ? colors.fg : colors.mutedFg;
-    ctx.font = `${tick.isMajor ? 'bold ' : ''}${LAYOUT.fontSize * dpr}px ${LAYOUT.fontFamily}`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(tick.label, x, headerH / 2);
+    if (tick.majorLabel) {
+      // Two-line label: day name on top, time below
+      ctx.fillStyle = colors.fg;
+      ctx.font = `bold ${(LAYOUT.fontSize - 1) * dpr}px ${LAYOUT.fontFamily}`;
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(tick.majorLabel, x, headerH / 2);
+      ctx.fillStyle = colors.mutedFg;
+      ctx.font = `${(LAYOUT.fontSize - 1) * dpr}px ${LAYOUT.fontFamily}`;
+      ctx.textBaseline = 'top';
+      ctx.fillText(tick.label, x, headerH / 2 + 2 * dpr);
+    } else {
+      ctx.fillStyle = tick.isMajor ? colors.fg : colors.mutedFg;
+      ctx.font = `${tick.isMajor ? 'bold ' : ''}${LAYOUT.fontSize * dpr}px ${LAYOUT.fontFamily}`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tick.label, x, headerH / 2);
+    }
   }
 
   // Header bottom border
