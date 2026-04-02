@@ -8,7 +8,7 @@
 
 import { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Clock, AlertTriangle, Tag, VideoOff } from 'lucide-react';
+import { Play, Clock, AlertTriangle, Tag, VideoOff, Camera } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -63,13 +63,15 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
 
   const portalUrl = currentProfile?.portalUrl ?? '';
   const tokenOpts = { token: accessToken ?? undefined };
-  const candidates = [
-    getEventImageUrl(portalUrl, event.id, 'objdetect', tokenOpts),
-    getEventImageUrl(portalUrl, event.id, 'alarm', tokenOpts),
-    getEventImageUrl(portalUrl, event.id, 'snapshot', tokenOpts),
-  ];
+  type FrameType = 'objdetect' | 'alarm' | 'snapshot';
+  const frameTypes: FrameType[] = ['objdetect', 'alarm', 'snapshot'];
+  const candidates = frameTypes.map((f) => ({
+    type: f,
+    url: getEventImageUrl(portalUrl, event.id, f, tokenOpts),
+  }));
 
   const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [resolvedFrame, setResolvedFrame] = useState<FrameType | null>(null);
   const [imgFailed, setImgFailed] = useState(false);
 
   // Preload off-screen: try each candidate until one loads successfully
@@ -77,7 +79,7 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
     let cancelled = false;
 
     (async () => {
-      for (const url of candidates) {
+      for (const { type, url } of candidates) {
         if (cancelled) return;
         const ok = await new Promise<boolean>((resolve) => {
           const img = new Image();
@@ -88,6 +90,7 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
         if (cancelled) return;
         if (ok) {
           setResolvedSrc(url);
+          setResolvedFrame(type);
           return;
         }
       }
@@ -96,6 +99,12 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
 
     return () => { cancelled = true; };
   }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const frameLabels: Record<FrameType, string> = {
+    objdetect: 'AI Detect',
+    alarm: 'Alarm',
+    snapshot: 'Snapshot',
+  };
 
   const parsed = parseISO(event.startDateTime.replace(' ', 'T'));
   const dateLabel = format(parsed, 'EEE, MMM d');
@@ -121,19 +130,28 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
         }}
         data-testid="event-preview-popover"
       >
-        {imgFailed ? (
-          <div className="aspect-video bg-muted/30 rounded-t-lg flex items-center justify-center">
-            <VideoOff className="h-8 w-8 text-muted-foreground/40" />
-          </div>
-        ) : resolvedSrc ? (
-          <img
-            src={resolvedSrc}
-            alt=""
-            className="aspect-video bg-black rounded-t-lg overflow-hidden object-contain w-full"
-          />
-        ) : (
-          <div className="aspect-video bg-muted/20 rounded-t-lg animate-pulse" />
-        )}
+        <div className="relative">
+          {imgFailed ? (
+            <div className="aspect-video bg-muted/30 rounded-t-lg flex items-center justify-center">
+              <VideoOff className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+          ) : resolvedSrc ? (
+            <img
+              src={resolvedSrc}
+              alt=""
+              className="aspect-video bg-black rounded-t-lg overflow-hidden object-contain w-full"
+            />
+          ) : (
+            <div className="aspect-video bg-muted/30 rounded-t-lg flex items-center justify-center">
+              <Camera className="h-8 w-8 text-muted-foreground/40 animate-pulse" />
+            </div>
+          )}
+          {resolvedFrame && (
+            <span className="absolute top-1.5 right-1.5 text-[9px] font-medium px-1.5 py-0.5 rounded bg-black/60 text-white/80">
+              {frameLabels[resolvedFrame]}
+            </span>
+          )}
+        </div>
         <div className="p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium text-sm truncate min-w-0" title={event.monitorName}>
