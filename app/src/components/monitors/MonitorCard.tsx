@@ -20,7 +20,7 @@ import type { MonitorCardProps } from '../../api/types';
 import { log, LogLevel } from '../../lib/logger';
 import { useTranslation } from 'react-i18next';
 import { getMonitorAspectRatio } from '../../lib/monitor-rotation';
-import { getMonitorRunState, isMonitorStreamable, monitorBadgeColor, monitorStatusI18nKey } from '../../lib/monitor-status';
+import { getMonitorRunState, isMonitorStreamable, monitorDotColor, monitorStatusI18nKey } from '../../lib/monitor-status';
 import { useAuthStore } from '../../stores/auth';
 import type { CSSProperties } from 'react';
 
@@ -140,15 +140,10 @@ function MonitorCardComponent({
             </div>
           )}
           <div className="absolute top-1.5 left-1.5 z-10">
-            <Badge
-              variant="default"
-              className={cn(
-                'text-[10px] px-1.5 py-0 shadow-sm',
-                monitorBadgeColor(runState)
-              )}
-            >
-              {t(monitorStatusI18nKey(runState))}
-            </Badge>
+            <span
+              className={cn('block h-2 w-2 rounded-full shadow-sm', monitorDotColor(runState))}
+              title={t(monitorStatusI18nKey(runState))}
+            />
           </div>
         </div>
         <div className="p-2 space-y-1.5">
@@ -282,16 +277,11 @@ function MonitorCardComponent({
           {/* Name & Resolution */}
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Badge
-                variant="default"
-                className={cn(
-                  'text-xs shadow-sm shrink-0',
-                  monitorBadgeColor(runState)
-                )}
+              <span
+                className={cn('block h-2 w-2 rounded-full shrink-0', monitorDotColor(runState))}
+                title={t(monitorStatusI18nKey(runState))}
                 data-testid="monitor-status"
-              >
-                {t(monitorStatusI18nKey(runState))}
-              </Badge>
+              />
               <div className="font-semibold text-base truncate" data-testid="monitor-name">{monitor.Name}</div>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shrink-0">
                 ID: {monitor.Id}
