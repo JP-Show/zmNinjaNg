@@ -133,6 +133,7 @@ function TimelineScrubberComponent({
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      setActiveEvents([]); // clear stale thumbnails so they don't block
       setScrubbing(true);
       updateScrub(e.clientX);
     },
@@ -156,6 +157,7 @@ function TimelineScrubberComponent({
   // Touch handlers
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
+      setActiveEvents([]); // clear stale thumbnails so they don't block
       setScrubbing(true);
       updateScrub(e.touches[0].clientX);
     },
@@ -230,10 +232,10 @@ function TimelineScrubberComponent({
       {timeLabel}
       {thumbnailStrip}
 
-      {/* Scrubber track — taller touch target */}
+      {/* Scrubber track — z-30 so it's always above the dismiss backdrop (z-10) and thumbnails (z-20) */}
       <div
         ref={trackRef}
-        className="relative h-8 cursor-pointer select-none touch-none"
+        className="relative z-30 h-8 cursor-pointer select-none touch-none"
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
