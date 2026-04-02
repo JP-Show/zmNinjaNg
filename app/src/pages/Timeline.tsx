@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
-import { RefreshCw, Filter, Clock, ScanSearch, X, Crosshair, ZoomIn, ZoomOut } from 'lucide-react';
+import { RefreshCw, Filter, Clock, ScanSearch, X, Crosshair, ZoomIn, ZoomOut, ChevronDown } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { filterEnabledMonitors } from '../lib/filters';
 import { formatForServer } from '../lib/time';
@@ -52,6 +52,9 @@ export default function Timeline() {
 
   // Detection filter state
   const [detectionCategory, setDetectionCategory] = useState<DetectionCategory>('all');
+
+  // Filters section collapsed state
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   // Viewport control keys — increment to trigger action
   const [resetKey, setResetKey] = useState(0);
@@ -315,9 +318,24 @@ export default function Timeline() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters — collapsible */}
       <Card>
-        <CardContent className="pt-6 space-y-4">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-6 pt-4 pb-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => setFiltersCollapsed((c) => !c)}
+          data-testid="timeline-filters-toggle"
+        >
+          <span className="flex items-center gap-2">
+            <Filter className="h-3.5 w-3.5" />
+            {t('events.filters')}
+            {activeFilterCount > 0 && (
+              <span className="text-[10px] bg-primary/15 text-primary rounded-full px-1.5 py-0.5">{activeFilterCount}</span>
+            )}
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${filtersCollapsed ? '-rotate-90' : ''}`} />
+        </button>
+        {!filtersCollapsed && <CardContent className="pt-2 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="startDate" className="text-xs">{t('timeline.start_date')}</Label>
@@ -396,7 +414,7 @@ export default function Timeline() {
               </Button>
             )}
           </div>
-        </CardContent>
+        </CardContent>}
       </Card>
 
       {/* Detection Filter Tabs */}
