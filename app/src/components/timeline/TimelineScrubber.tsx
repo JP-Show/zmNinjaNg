@@ -6,7 +6,7 @@
  * all events overlapping the playhead time.
  */
 
-import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { memo, useState, useCallback, useRef, useEffect, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { VideoOff } from 'lucide-react';
@@ -54,7 +54,7 @@ function ScrubberThumbnail({
   const [failed, setFailed] = useState(false);
 
   const portalUrl = currentProfile?.portalUrl ?? '';
-  const imageUrl = getEventImageUrl(portalUrl, event.id, 'snapshot', {
+  const imageUrl = getEventImageUrl(portalUrl, event.id, 'alarm', {
     token: accessToken ?? undefined,
   });
 
@@ -104,6 +104,9 @@ function TimelineScrubberComponent({
     [viewStartMs, viewEndMs],
   );
 
+  // Debounce event lookup to reduce server load from thumbnail fetches
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   const updateScrub = useCallback(
     (clientX: number) => {
       const track = trackRef.current;
@@ -112,10 +115,15 @@ function TimelineScrubberComponent({
       const norm = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       setHandleNorm(norm);
       const timeMs = normToTime(norm);
+      // Playhead line updates immediately
       onPlayheadChange(timeMs);
-      setActiveEvents(eventsNearTime(events, timeMs, viewEndMs - viewStartMs));
+      // Debounce thumbnail lookup (150ms)
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setActiveEvents(eventsNearTime(events, timeMs, viewEndMs - viewStartMs));
+      }, 150);
     },
-    [events, normToTime, onPlayheadChange],
+    [events, normToTime, onPlayheadChange, viewStartMs, viewEndMs],
   );
 
   // Mouse handlers
@@ -187,7 +195,13 @@ function TimelineScrubberComponent({
             maxWidth: '90%',
           }}
         >
-          <div className="flex gap-1.5 p-2 rounded-lg bg-popover/95 border border-border shadow-xl backdrop-blur-sm overflow-x-auto">
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+          <div
+            className="flex gap-1.5 p-2 rounded-lg bg-popover/95 border border-border shadow-xl backdrop-blur-sm overflow-x-auto"
+            style={{ touchAction: 'pan-x' }}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             {activeEvents.map((ev) => (
               <ScrubberThumbnail
                 key={ev.id}
