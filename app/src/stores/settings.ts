@@ -37,6 +37,7 @@ export interface ProfileSettings {
   eventsViewMode: EventsViewMode; // List vs montage view for Events page
   monitorsFeedFit: MonitorsLayoutMode; // Layout mode for monitor list
   monitorsViewMode: MonitorsViewMode; // List or grid view
+  monitorGridCols: number; // Grid columns for Monitors page grid view
   monitorDetailFeedFit: MonitorFeedFit; // Object-fit for monitor detail feed
   eventsThumbnailFit: MonitorFeedFit; // Object-fit for event thumbnails
   monitorDetailCycleSeconds: number; // Auto-cycle interval for single monitor view (0 = off)
@@ -144,6 +145,7 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   eventsViewMode: 'list',
   monitorsFeedFit: 'contain',
   monitorsViewMode: 'list' as const,
+  monitorGridCols: 2,
   monitorDetailFeedFit: 'contain',
   eventsThumbnailFit: 'contain',
   monitorDetailCycleSeconds: 0,

@@ -5,7 +5,7 @@
  * Allows filtering and quick access to monitor details.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getMonitors, updateMonitor } from '../api/monitors';
@@ -26,6 +26,8 @@ import type { Monitor } from '../api/types';
 import { NotificationBadge } from '../components/NotificationBadge';
 import { toast } from 'sonner';
 import { log, LogLevel } from '../lib/logger';
+import { EventMontageGridControls } from '../components/events/EventMontageGridControls';
+import { useEventMontageGrid } from '../hooks/useEventMontageGrid';
 export default function Monitors() {
   const { t } = useTranslation();
   const [selectedMonitor, setSelectedMonitor] = useState<Monitor | null>(null);
@@ -37,6 +39,26 @@ export default function Monitors() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const zmVersion = useAuthStore((s) => s.version);
   const { isFilterActive, filteredMonitorIds } = useGroupFilter();
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMonitorGridChange = useCallback((cols: number) => {
+    if (!currentProfile) return;
+    updateSettings(currentProfile.id, { monitorGridCols: cols });
+  }, [currentProfile, updateSettings]);
+
+  const {
+    gridCols: monitorGridCols,
+    isCustomGridDialogOpen,
+    setIsCustomGridDialogOpen,
+    customCols,
+    setCustomCols,
+    handleApplyGridLayout: handleMonitorApplyGridLayout,
+    handleCustomGridSubmit: handleMonitorCustomGridSubmit,
+  } = useEventMontageGrid({
+    initialCols: settings.monitorGridCols,
+    containerRef: gridContainerRef,
+    onGridChange: handleMonitorGridChange,
+  });
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['monitors', currentProfile?.id],
@@ -165,6 +187,17 @@ export default function Monitors() {
           >
             {settings.monitorsViewMode === 'list' ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
           </Button>
+          {settings.monitorsViewMode === 'grid' && (
+            <EventMontageGridControls
+              gridCols={monitorGridCols}
+              customCols={customCols}
+              isCustomGridDialogOpen={isCustomGridDialogOpen}
+              onApplyGridLayout={handleMonitorApplyGridLayout}
+              onCustomColsChange={setCustomCols}
+              onCustomGridDialogOpenChange={setIsCustomGridDialogOpen}
+              onCustomGridSubmit={handleMonitorCustomGridSubmit}
+            />
+          )}
           <Select value={settings.monitorsFeedFit} onValueChange={handleFeedFitChange}>
             <SelectTrigger className="h-8 sm:h-9 w-24" data-testid="monitors-fit-select">
               <SelectValue placeholder={t('monitors.feed_fit')} />
@@ -192,7 +225,12 @@ export default function Monitors() {
             {t('monitors.no_cameras')}
           </div>
         ) : settings.monitorsViewMode === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3" data-testid="monitor-grid">
+            <div
+              ref={gridContainerRef}
+              className="grid gap-3"
+              style={{ gridTemplateColumns: `repeat(${monitorGridCols}, minmax(0, 1fr))` }}
+              data-testid="monitor-grid"
+            >
               {allMonitors.map(({ Monitor, Monitor_Status }) => (
                 <MonitorCard
                   key={Monitor.Id}
