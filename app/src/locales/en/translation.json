@@ -937,7 +937,7 @@
     "open_event": "Open",
     "play_event": "Play",
     "events_loaded": "{{count}} events",
-    "pinch_to_zoom": "Scroll to zoom, drag to pan",
+    "pinch_to_zoom": "Scroll/pinch to zoom",
     "no_events_in_range": "No events in this time range",
     "center_view": "Center"
   },

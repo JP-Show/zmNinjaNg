@@ -937,7 +937,7 @@
     "open_event": "打开",
     "play_event": "播放",
     "events_loaded": "{{count}} 个事件",
-    "pinch_to_zoom": "滚动缩放，拖动平移",
+    "pinch_to_zoom": "滚动/捏合缩放",
     "no_events_in_range": "此时间范围内无事件",
     "center_view": "居中"
   },

@@ -937,7 +937,7 @@
     "open_event": "Öffnen",
     "play_event": "Abspielen",
     "events_loaded": "{{count}} Ereignisse",
-    "pinch_to_zoom": "Scrollen zum Zoomen, Ziehen zum Bewegen",
+    "pinch_to_zoom": "Scrollen/Pinch zum Zoomen",
     "no_events_in_range": "Keine Ereignisse in diesem Zeitraum",
     "center_view": "Zentrieren"
   },
