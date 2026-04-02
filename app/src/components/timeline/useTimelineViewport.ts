@@ -89,6 +89,41 @@ export function useTimelineViewport({
     [],
   );
 
+  const animFrameRef = useRef(0);
+
+  /** Smoothly animate from current range to target over ~300ms. */
+  const animateToRange = useCallback(
+    (targetStart: number, targetEnd: number) => {
+      cancelAnimationFrame(animFrameRef.current);
+      const duration = 300; // ms
+      const startTime = performance.now();
+
+      setRangeState((prev) => {
+        const fromStart = prev.startMs;
+        const fromEnd = prev.endMs;
+
+        const tick = (now: number) => {
+          const elapsed = now - startTime;
+          const t = Math.min(elapsed / duration, 1);
+          // ease-out cubic
+          const ease = 1 - Math.pow(1 - t, 3);
+
+          const s = fromStart + (targetStart - fromStart) * ease;
+          const e = fromEnd + (targetEnd - fromEnd) * ease;
+          setRangeState({ startMs: s, endMs: e });
+
+          if (t < 1) {
+            animFrameRef.current = requestAnimationFrame(tick);
+          }
+        };
+
+        animFrameRef.current = requestAnimationFrame(tick);
+        return prev; // don't change yet, animation handles it
+      });
+    },
+    [],
+  );
+
   const durationMs = range.endMs - range.startMs;
 
   const timeToNorm = useCallback(
@@ -108,6 +143,7 @@ export function useTimelineViewport({
     pan,
     zoom,
     setRange,
+    animateToRange,
     timeToNorm,
     normToTime,
   };
