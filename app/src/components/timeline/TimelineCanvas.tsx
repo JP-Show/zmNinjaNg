@@ -10,6 +10,7 @@ import { useTimelineGestures } from './useTimelineGestures';
 import { renderTimeline, type MonitorRow, type RenderViewport } from './timeline-renderer';
 import { hitTest } from './timeline-hit-test';
 import { canvasHeight, LAYOUT, getMonitorColor, type TimelineEvent } from './timeline-layout';
+import { TimelineScrubber } from './TimelineScrubber';
 
 interface TimelineCanvasProps {
   monitors: MonitorRow[];
@@ -42,6 +43,7 @@ const TimelineCanvasInner = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const [playheadMs, setPlayheadMs] = useState<number | null>(null);
   const [, setNowTick] = useState(0);
 
   const viewport = useTimelineViewport({ startMs, endMs });
@@ -180,7 +182,7 @@ const TimelineCanvasInner = ({
       dpr,
     };
 
-    renderTimeline(ctx, canvas, monitors, events, monitorIds, renderVp, hoveredEventId);
+    renderTimeline(ctx, canvas, monitors, events, monitorIds, renderVp, hoveredEventId, playheadMs);
   });
 
   return (
@@ -218,6 +220,16 @@ const TimelineCanvasInner = ({
             </span>
           </div>
         ))}
+      </div>
+      {/* Scrubber bar */}
+      <div className="px-2 pb-2">
+        <TimelineScrubber
+          events={events}
+          monitors={monitors}
+          viewStartMs={viewport.startMs}
+          viewEndMs={viewport.endMs}
+          onPlayheadChange={setPlayheadMs}
+        />
       </div>
     </div>
   );

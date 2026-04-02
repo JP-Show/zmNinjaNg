@@ -1,0 +1,243 @@
+/**
+ * TimelineScrubber
+ *
+ * A draggable scrubber bar below the timeline canvas. Dragging the handle
+ * moves a playhead through the timeline and shows thumbnail previews of
+ * all events overlapping the playhead time.
+ */
+
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { VideoOff } from 'lucide-react';
+import { getEventImageUrl } from '../../api/events';
+import { useCurrentProfile } from '../../hooks/useCurrentProfile';
+import { useAuthStore } from '../../stores/auth';
+import type { TimelineEvent } from './timeline-layout';
+import type { MonitorRow } from './timeline-renderer';
+
+interface TimelineScrubberProps {
+  events: TimelineEvent[];
+  monitors: MonitorRow[];
+  viewStartMs: number;
+  viewEndMs: number;
+  onPlayheadChange: (timeMs: number | null) => void;
+}
+
+/** Find all events that overlap a given timestamp. */
+function eventsAtTime(events: TimelineEvent[], timeMs: number): TimelineEvent[] {
+  return events.filter((ev) => ev.startMs <= timeMs && ev.endMs >= timeMs);
+}
+
+/** Find the closest event to a timestamp (within 30s tolerance). */
+function nearestEvents(events: TimelineEvent[], timeMs: number): TimelineEvent[] {
+  const exact = eventsAtTime(events, timeMs);
+  if (exact.length > 0) return exact;
+
+  // Find events within a small window around the playhead
+  const tolerance = 30_000; // 30 seconds
+  return events.filter(
+    (ev) => ev.startMs <= timeMs + tolerance && ev.endMs >= timeMs - tolerance,
+  );
+}
+
+function ScrubberThumbnail({
+  event,
+  monitorName,
+}: {
+  event: TimelineEvent;
+  monitorName: string;
+}) {
+  const navigate = useNavigate();
+  const { currentProfile } = useCurrentProfile();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const [failed, setFailed] = useState(false);
+
+  const portalUrl = currentProfile?.portalUrl ?? '';
+  const imageUrl = getEventImageUrl(portalUrl, event.id, 'snapshot', {
+    token: accessToken ?? undefined,
+  });
+
+  return (
+    <button
+      type="button"
+      className="relative shrink-0 w-24 h-16 rounded overflow-hidden bg-black border border-border/50 hover:border-primary/50 transition-colors cursor-pointer"
+      onClick={() => navigate(`/events/${event.id}`)}
+      title={`${monitorName} · #${event.id}`}
+      data-testid={`scrubber-thumb-${event.id}`}
+    >
+      {failed ? (
+        <div className="w-full h-full flex items-center justify-center bg-muted/30">
+          <VideoOff className="h-4 w-4 text-muted-foreground/40" />
+        </div>
+      ) : (
+        <img
+          src={imageUrl}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      )}
+      <span className="absolute bottom-0 left-0 right-0 text-[8px] text-white bg-black/70 px-1 truncate">
+        {monitorName}
+      </span>
+    </button>
+  );
+}
+
+function TimelineScrubberComponent({
+  events,
+  monitors,
+  viewStartMs,
+  viewEndMs,
+  onPlayheadChange,
+}: TimelineScrubberProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [handleNorm, setHandleNorm] = useState(0.5); // 0-1 position
+  const [activeEvents, setActiveEvents] = useState<TimelineEvent[]>([]);
+
+  const monitorNameMap = new Map(monitors.map((m) => [m.id, m.name]));
+
+  const normToTime = useCallback(
+    (norm: number) => viewStartMs + norm * (viewEndMs - viewStartMs),
+    [viewStartMs, viewEndMs],
+  );
+
+  const updateScrub = useCallback(
+    (clientX: number) => {
+      const track = trackRef.current;
+      if (!track) return;
+      const rect = track.getBoundingClientRect();
+      const norm = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      setHandleNorm(norm);
+      const timeMs = normToTime(norm);
+      onPlayheadChange(timeMs);
+      setActiveEvents(nearestEvents(events, timeMs));
+    },
+    [events, normToTime, onPlayheadChange],
+  );
+
+  // Mouse handlers
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setScrubbing(true);
+      updateScrub(e.clientX);
+    },
+    [updateScrub],
+  );
+
+  useEffect(() => {
+    if (!scrubbing) return;
+
+    const onMouseMove = (e: MouseEvent) => updateScrub(e.clientX);
+    const onMouseUp = () => {
+      setScrubbing(false);
+      onPlayheadChange(null);
+      setActiveEvents([]);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [scrubbing, updateScrub, onPlayheadChange]);
+
+  // Touch handlers
+  const onTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      setScrubbing(true);
+      updateScrub(e.touches[0].clientX);
+    },
+    [updateScrub],
+  );
+
+  const onTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (scrubbing) updateScrub(e.touches[0].clientX);
+    },
+    [scrubbing, updateScrub],
+  );
+
+  const onTouchEnd = useCallback(() => {
+    setScrubbing(false);
+    onPlayheadChange(null);
+    setActiveEvents([]);
+  }, [onPlayheadChange]);
+
+  const playheadTime = normToTime(handleNorm);
+
+  return (
+    <div className="relative" data-testid="timeline-scrubber">
+      {/* Floating thumbnail strip — shown while scrubbing */}
+      {scrubbing && activeEvents.length > 0 && (
+        <div
+          className="absolute bottom-full mb-2 left-0 right-0 flex justify-center pointer-events-auto z-20"
+        >
+          <div className="flex gap-1.5 p-2 rounded-lg bg-popover/95 border border-border shadow-xl backdrop-blur-sm max-w-full overflow-x-auto">
+            {activeEvents.slice(0, 8).map((ev) => (
+              <ScrubberThumbnail
+                key={ev.id}
+                event={ev}
+                monitorName={monitorNameMap.get(ev.monitorId) ?? ''}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Time label — shown while scrubbing */}
+      {scrubbing && (
+        <div
+          className="absolute bottom-full mb-1 text-[10px] text-muted-foreground bg-popover border border-border rounded px-1.5 py-0.5 -translate-x-1/2 pointer-events-none z-10"
+          style={{ left: `${handleNorm * 100}%` }}
+        >
+          {format(new Date(playheadTime), 'MMM d, HH:mm:ss')}
+        </div>
+      )}
+
+      {/* Scrubber track */}
+      <div
+        ref={trackRef}
+        className="relative h-6 cursor-pointer select-none touch-none"
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        data-testid="scrubber-track"
+      >
+        {/* Track background */}
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-border/50" />
+
+        {/* Event density markers */}
+        {events.map((ev) => {
+          const left = ((ev.startMs - viewStartMs) / (viewEndMs - viewStartMs)) * 100;
+          const right = ((ev.endMs - viewStartMs) / (viewEndMs - viewStartMs)) * 100;
+          const width = Math.max(right - left, 0.3);
+          if (left > 100 || right < 0) return null;
+          return (
+            <div
+              key={ev.id}
+              className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary/30"
+              style={{ left: `${Math.max(0, left)}%`, width: `${Math.min(width, 100 - left)}%` }}
+            />
+          );
+        })}
+
+        {/* Draggable handle */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-md transition-transform"
+          style={{
+            left: `${handleNorm * 100}%`,
+            transform: `translate(-50%, -50%) scale(${scrubbing ? 1.3 : 1})`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export const TimelineScrubber = memo(TimelineScrubberComponent);

@@ -512,6 +512,45 @@ export function drawCurrentTime(
 }
 
 // ---------------------------------------------------------------------------
+// Drawing: playhead (scrubber cursor)
+// ---------------------------------------------------------------------------
+
+export function drawPlayhead(
+  ctx: CanvasRenderingContext2D,
+  viewport: RenderViewport,
+  playheadMs: number,
+): void {
+  const { dpr, startMs, endMs, width, height } = viewport;
+  if (playheadMs < startMs || playheadMs > endMs) return;
+
+  const x = timeToX(playheadMs, startMs, endMs, width) * dpr;
+  const headerH = LAYOUT.headerHeight * dpr;
+
+  ctx.save();
+
+  // Bright vertical line
+  ctx.strokeStyle = '#60a5fa'; // blue-400
+  ctx.lineWidth = 2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(x, headerH);
+  ctx.lineTo(x, height * dpr);
+  ctx.stroke();
+
+  // Small diamond handle at top
+  const size = 5 * dpr;
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath();
+  ctx.moveTo(x, headerH - size);
+  ctx.lineTo(x + size, headerH);
+  ctx.lineTo(x, headerH + size);
+  ctx.lineTo(x - size, headerH);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------------------
 // Orchestrator
 // ---------------------------------------------------------------------------
 
@@ -523,6 +562,7 @@ export function renderTimeline(
   monitorIds: string[],
   viewport: RenderViewport,
   hoveredEventId: string | null,
+  playheadMs?: number | null,
 ): void {
   const { dpr, width, height } = viewport;
   const w = width * dpr;
@@ -541,4 +581,7 @@ export function renderTimeline(
   drawTimeAxis(ctx, viewport, colors);
   drawEvents(ctx, events, monitorIds, viewport, hoveredEventId);
   drawCurrentTime(ctx, viewport, colors);
+  if (playheadMs != null) {
+    drawPlayhead(ctx, viewport, playheadMs);
+  }
 }
