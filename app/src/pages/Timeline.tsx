@@ -24,6 +24,7 @@ import { MonitorFilterPopoverContent } from '../components/filters/MonitorFilter
 import { EmptyState } from '../components/ui/empty-state';
 import { NotificationBadge } from '../components/NotificationBadge';
 import { useTimelineFilters } from '../hooks/useTimelineFilters';
+import { useEventTagMapping } from '../hooks/useEventTags';
 import { TimelineCanvas } from '../components/timeline/TimelineCanvas';
 import { DetectionFilterTabs, categorizeEvent, type DetectionCategory } from '../components/timeline/DetectionFilterTabs';
 import { EventPreviewPopover } from '../components/timeline/EventPreviewPopover';
@@ -154,6 +155,13 @@ export default function Timeline() {
   const startMs = new Date(startDate).getTime();
   const endMs = new Date(endDate).getTime();
 
+  // Fetch tags for loaded events
+  const eventIds = useMemo(
+    () => data?.events?.map((e) => e.Event.Id) ?? [],
+    [data],
+  );
+  const { getTagsForEvent } = useEventTagMapping({ eventIds });
+
   // Build a lookup from raw API events for the preview popover
   const rawEventMap = useMemo(() => {
     const map = new Map<string, EventData>();
@@ -226,6 +234,7 @@ export default function Timeline() {
       alarmFrames: raw.Event.AlarmFrames,
       notes: raw.Event.Notes,
       monitorName: monitorNameMap.get(raw.Event.MonitorId) ?? raw.Event.Name,
+      tags: getTagsForEvent(raw.Event.Id).map((tag) => tag.Name),
     };
   })() : null;
 

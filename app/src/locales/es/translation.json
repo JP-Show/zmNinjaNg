@@ -929,6 +929,7 @@
     "filter_animal": "Animales",
     "filter_other": "Otros",
     "open_event": "Abrir",
+    "play_event": "Reproducir",
     "events_loaded": "{{count}} eventos",
     "pinch_to_zoom": "Desplazar para zoom, arrastrar para mover",
     "no_events_in_range": "Sin eventos en este rango"

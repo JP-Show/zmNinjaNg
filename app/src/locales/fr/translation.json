@@ -929,6 +929,7 @@
     "filter_animal": "Animaux",
     "filter_other": "Autres",
     "open_event": "Ouvrir",
+    "play_event": "Lire",
     "events_loaded": "{{count}} événements",
     "pinch_to_zoom": "Défiler pour zoomer, glisser pour naviguer",
     "no_events_in_range": "Aucun événement dans cette période"

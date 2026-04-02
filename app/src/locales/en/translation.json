@@ -929,6 +929,7 @@
     "filter_animal": "Animals",
     "filter_other": "Other",
     "open_event": "Open",
+    "play_event": "Play",
     "events_loaded": "{{count}} events",
     "pinch_to_zoom": "Scroll to zoom, drag to pan",
     "no_events_in_range": "No events in this time range"

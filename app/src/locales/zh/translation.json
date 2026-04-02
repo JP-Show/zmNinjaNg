@@ -929,6 +929,7 @@
     "filter_animal": "动物",
     "filter_other": "其他",
     "open_event": "打开",
+    "play_event": "播放",
     "events_loaded": "{{count}} 个事件",
     "pinch_to_zoom": "滚动缩放，拖动平移",
     "no_events_in_range": "此时间范围内无事件"

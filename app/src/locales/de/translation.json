@@ -929,6 +929,7 @@
     "filter_animal": "Tiere",
     "filter_other": "Andere",
     "open_event": "Öffnen",
+    "play_event": "Abspielen",
     "events_loaded": "{{count}} Ereignisse",
     "pinch_to_zoom": "Scrollen zum Zoomen, Ziehen zum Bewegen",
     "no_events_in_range": "Keine Ereignisse in diesem Zeitraum"
