@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
-import { RefreshCw, Filter, Activity, AlertCircle, Clock, ScanSearch, X, Crosshair, ZoomIn, ZoomOut } from 'lucide-react';
+import { RefreshCw, Filter, Clock, ScanSearch, X, Crosshair, ZoomIn, ZoomOut } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { filterEnabledMonitors } from '../lib/filters';
 import { formatForServer } from '../lib/time';

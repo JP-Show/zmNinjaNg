@@ -6,7 +6,7 @@
  * all events overlapping the playhead time.
  */
 
-import { memo, useState, useCallback, useRef, useEffect, type RefObject } from 'react';
+import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { VideoOff } from 'lucide-react';
@@ -105,7 +105,7 @@ function TimelineScrubberComponent({
   );
 
   // Debounce event lookup to reduce server load from thumbnail fetches
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const updateScrub = useCallback(
     (clientX: number) => {

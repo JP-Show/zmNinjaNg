@@ -24,6 +24,7 @@ interface TimelineViewport {
   pan: (deltaPx: number, canvasWidthPx: number) => void;
   zoom: (factor: number, anchorNorm: number) => void;
   setRange: (startMs: number, endMs: number) => void;
+  animateToRange: (targetStart: number, targetEnd: number) => void;
   timeToNorm: (timeMs: number) => number;
   normToTime: (norm: number) => number;
 }
