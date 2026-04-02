@@ -375,9 +375,6 @@ export default function Timeline() {
             onSelect={setDetectionCategory}
             counts={detectionCounts}
           />
-          <span className="text-xs text-muted-foreground shrink-0">
-            {t('timeline.events_loaded', { count: filteredEvents.length })}
-          </span>
         </div>
       )}
 
