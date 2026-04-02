@@ -411,7 +411,8 @@ export default function Timeline() {
                   <Crosshair className="h-3.5 w-3.5 mr-1" />
                   {t('timeline.center_view')}
                 </Button>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground/30">|</span>
+                <span className="text-xs text-muted-foreground/50">
                   {t('timeline.pinch_to_zoom')}
                 </span>
               </div>
