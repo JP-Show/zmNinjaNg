@@ -26,6 +26,7 @@ These are non-negotiable. Every rule applies to all communication: responses, co
 20. **One logical change per commit** — use conventional format: `feat:`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`. Reference issues with `refs #<id>` or `fixes #<id>`.
 21. **Don't batch unrelated changes** — split into separate commits.
 22. **Analyze test failures** — read error output and fix systematically. Don't retry blindly.
+23. **Concise i18n labels** — button, tab, and action labels must be short across all languages. Prefer single-word synonyms (ES: "Ajustes" not "Configuración", DE: "Speichern" not "Änderungen speichern", FR: "Enregistrer" not "Enregistrer les modifications"). Test translations fit on a 320px-wide phone screen. Add `min-w-0` + `truncate` to flex containers with translated button text as a safety net.
 
 ---
 

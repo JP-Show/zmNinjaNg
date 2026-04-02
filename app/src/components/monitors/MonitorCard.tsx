@@ -191,18 +191,18 @@ function MonitorCardComponent({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 pt-0.5">
+          <div className="flex items-center gap-1 pt-0.5 min-w-0">
             <Button
               variant="outline"
               size="sm"
-              className="text-[10px] h-6 px-2 relative flex-1"
+              className="text-[10px] h-6 px-2 relative flex-1 min-w-0"
               onClick={() => navigate(`/events?monitorId=${monitor.Id}`, { state: { from: '/monitors' } })}
               data-testid="monitor-events-button"
             >
-              <Clock className="h-2.5 w-2.5 mr-0.5" />
-              {t('sidebar.events')}
+              <Clock className="h-2.5 w-2.5 mr-0.5 shrink-0" />
+              <span className="truncate">{t('sidebar.events')}</span>
               {eventCount !== undefined && eventCount > 0 && (
-                <Badge variant="secondary" className="ml-0.5 px-0.5 py-0 text-[8px] h-3 min-w-3 bg-blue-500/15 text-blue-400 border-blue-500/20">
+                <Badge variant="secondary" className="ml-0.5 px-0.5 py-0 text-[8px] h-3 min-w-3 shrink-0 bg-blue-500/15 text-blue-400 border-blue-500/20">
                   {formatEventCount(eventCount)}
                 </Badge>
               )}
@@ -210,12 +210,12 @@ function MonitorCardComponent({
             <Button
               variant="outline"
               size="sm"
-              className="text-[10px] h-6 px-2 flex-1"
+              className="text-[10px] h-6 px-2 flex-1 min-w-0"
               onClick={handleShowSettings}
               data-testid="monitor-settings-button"
             >
-              <Settings className="h-2.5 w-2.5 mr-0.5" />
-              {t('sidebar.settings')}
+              <Settings className="h-2.5 w-2.5 mr-0.5 shrink-0" />
+              <span className="truncate">{t('sidebar.settings')}</span>
             </Button>
             <Button
               variant="outline"
@@ -340,20 +340,20 @@ function MonitorCardComponent({
           </div>
 
           {/* Quick Actions */}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 min-w-0">
             <Button
               variant="outline"
               size="sm"
-              className="text-xs h-8 relative"
+              className="text-xs h-8 relative min-w-0 max-w-[45%]"
               onClick={() => navigate(`/events?monitorId=${monitor.Id}`, { state: { from: '/monitors' } })}
               data-testid="monitor-events-button"
             >
-              <Clock className="h-3 w-3 mr-1" />
-              {t('sidebar.events')}
+              <Clock className="h-3 w-3 mr-1 shrink-0" />
+              <span className="truncate">{t('sidebar.events')}</span>
               {eventCount !== undefined && eventCount > 0 && (
                 <Badge
                   variant="secondary"
-                  className="ml-1 px-1 py-0 text-[10px] h-4 min-w-4 bg-blue-500/15 text-blue-400 border-blue-500/20"
+                  className="ml-1 px-1 py-0 text-[10px] h-4 min-w-4 shrink-0 bg-blue-500/15 text-blue-400 border-blue-500/20"
                 >
                   {formatEventCount(eventCount)}
                 </Badge>
@@ -362,17 +362,17 @@ function MonitorCardComponent({
             <Button
               variant="outline"
               size="sm"
-              className="text-xs h-8"
+              className="text-xs h-8 min-w-0 max-w-[45%]"
               onClick={handleShowSettings}
               data-testid="monitor-settings-button"
             >
-              <Settings className="h-3 w-3 mr-1" />
-              {t('sidebar.settings')}
+              <Settings className="h-3 w-3 mr-1 shrink-0" />
+              <span className="truncate">{t('sidebar.settings')}</span>
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 shrink-0"
               onClick={handleDownloadSnapshot}
               title={t('monitors.download_snapshot')}
               aria-label={t('monitors.download_snapshot')}
