@@ -151,9 +151,30 @@ export default function Timeline() {
     return rows;
   }, [enabledMonitors, filteredEvents]);
 
-  // Canvas time range
-  const startMs = new Date(startDate).getTime();
-  const endMs = new Date(endDate).getTime();
+  // Canvas time range — fit to actual event extent (with padding), fall back to filter range
+  const { startMs, endMs } = useMemo(() => {
+    const filterStart = new Date(startDate).getTime();
+    const filterEnd = new Date(endDate).getTime();
+
+    if (filteredEvents.length === 0) {
+      return { startMs: filterStart, endMs: filterEnd };
+    }
+
+    let minMs = Infinity;
+    let maxMs = -Infinity;
+    for (const ev of filteredEvents) {
+      if (ev.startMs < minMs) minMs = ev.startMs;
+      if (ev.endMs > maxMs) maxMs = ev.endMs;
+    }
+
+    // Add 5% padding on each side so events aren't flush with edges
+    const span = maxMs - minMs;
+    const padding = Math.max(span * 0.05, 60_000); // at least 1 minute
+    return {
+      startMs: Math.max(filterStart, minMs - padding),
+      endMs: Math.min(filterEnd, maxMs + padding),
+    };
+  }, [filteredEvents, startDate, endDate]);
 
   // Fetch tags for loaded events
   const eventIds = useMemo(
