@@ -6,7 +6,7 @@
  * Tapping outside the popover dismisses it.
  */
 
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Clock, AlertTriangle, Tag, VideoOff } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -63,21 +63,39 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
 
   const portalUrl = currentProfile?.portalUrl ?? '';
   const tokenOpts = { token: accessToken ?? undefined };
-  const objdetectUrl = getEventImageUrl(portalUrl, event.id, 'objdetect', tokenOpts);
-  const alarmUrl = getEventImageUrl(portalUrl, event.id, 'alarm', tokenOpts);
-  const snapshotUrl = getEventImageUrl(portalUrl, event.id, 'snapshot', tokenOpts);
-  const [imgSrc, setImgSrc] = useState(objdetectUrl);
+  const candidates = [
+    getEventImageUrl(portalUrl, event.id, 'objdetect', tokenOpts),
+    getEventImageUrl(portalUrl, event.id, 'alarm', tokenOpts),
+    getEventImageUrl(portalUrl, event.id, 'snapshot', tokenOpts),
+  ];
+
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
   const [imgFailed, setImgFailed] = useState(false);
 
-  const handleImgError = () => {
-    if (imgSrc === objdetectUrl) {
-      setImgSrc(alarmUrl);
-    } else if (imgSrc === alarmUrl) {
-      setImgSrc(snapshotUrl);
-    } else {
-      setImgFailed(true);
-    }
-  };
+  // Preload off-screen: try each candidate until one loads successfully
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      for (const url of candidates) {
+        if (cancelled) return;
+        const ok = await new Promise<boolean>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img.naturalWidth > 0);
+          img.onerror = () => resolve(false);
+          img.src = url;
+        });
+        if (cancelled) return;
+        if (ok) {
+          setResolvedSrc(url);
+          return;
+        }
+      }
+      if (!cancelled) setImgFailed(true);
+    })();
+
+    return () => { cancelled = true; };
+  }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const parsed = parseISO(event.startDateTime.replace(' ', 'T'));
   const dateLabel = format(parsed, 'EEE, MMM d');
@@ -107,13 +125,14 @@ export const EventPreviewPopover = memo(function EventPreviewPopover({
           <div className="aspect-video bg-muted/30 rounded-t-lg flex items-center justify-center">
             <VideoOff className="h-8 w-8 text-muted-foreground/40" />
           </div>
-        ) : (
+        ) : resolvedSrc ? (
           <img
-            src={imgSrc}
+            src={resolvedSrc}
             alt=""
             className="aspect-video bg-black rounded-t-lg overflow-hidden object-contain w-full"
-            onError={handleImgError}
           />
+        ) : (
+          <div className="aspect-video bg-muted/20 rounded-t-lg animate-pulse" />
         )}
         <div className="p-3 space-y-2">
           <div className="flex items-center justify-between gap-2">
