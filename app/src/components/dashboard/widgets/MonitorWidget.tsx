@@ -40,6 +40,7 @@ interface MonitorWidgetProps {
 function SingleMonitor({ monitorId, objectFit }: { monitorId: string; objectFit: MonitorFeedFit }) {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const zmVersion = useAuthStore((s) => s.version);
     const { data: monitor, isLoading, error } = useQuery({
         queryKey: ['monitor', monitorId],
         queryFn: () => getMonitor(monitorId),
@@ -72,7 +73,6 @@ function SingleMonitor({ monitorId, objectFit }: { monitorId: string; objectFit:
         return null;
     }
 
-    const zmVersion = useAuthStore((s) => s.version);
     const runState = getMonitorRunState(monitor.Monitor, monitor.Monitor_Status, zmVersion);
     const streamable = isMonitorStreamable(runState);
 
