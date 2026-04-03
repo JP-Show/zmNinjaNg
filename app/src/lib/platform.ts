@@ -51,4 +51,13 @@ export const Platform = {
   get shouldUseProxy() {
     return this.isDev && this.isWeb;
   },
+
+  /**
+   * True if running on an Android TV or Fire Stick device.
+   * Checks user agent for TV indicators. Use TvDetector plugin for definitive check.
+   */
+  get isTVDevice() {
+    const ua = navigator.userAgent.toLowerCase();
+    return /\b(tv|aft|stb|android tv|fire tv|bravia|smart-tv|smarttv|googletv)\b/.test(ua);
+  },
 };
