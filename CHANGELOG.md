@@ -1,5 +1,13 @@
 # Changelog
 
+## [zmNinjaNG-1.1.7](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.1.7) (2026-04-03)
+
+[Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.1.6...zmNinjaNG-1.1.7)
+
+**Fixed bugs:**
+
+- fix: monitors page shows no video when status reports offline but stream works [\#98](https://github.com/pliablepixels/zmNinjaNG/issues/98)
+
 ## [zmNinjaNG-1.1.6](https://github.com/pliablepixels/zmNinjaNG/tree/zmNinjaNG-1.1.6) (2026-04-02)
 
 [Full Changelog](https://github.com/pliablepixels/zmNinjaNG/compare/zmNinjaNG-1.1.5...zmNinjaNG-1.1.6)
