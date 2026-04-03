@@ -27,6 +27,7 @@ import { BackgroundTaskDrawer } from '../BackgroundTaskDrawer';
 import { CertTrustDialog } from '../CertTrustDialog';
 import { onCertTrustRequest, type PendingCertTrust } from '../../lib/cert-trust-event';
 import { useTvMode } from '../../hooks/useTvMode';
+import { enableSpatialNavigation } from '../../lib/tv-spatial-nav';
 import { useKioskStore } from '../../stores/kioskStore';
 import { KioskOverlay } from '../kiosk/KioskOverlay';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -49,6 +50,12 @@ export default function AppLayout() {
   useEffect(() => {
     document.documentElement.classList.toggle('tv-mode', isTvMode);
     return () => document.documentElement.classList.remove('tv-mode');
+  }, [isTvMode]);
+
+  useEffect(() => {
+    if (isTvMode) {
+      enableSpatialNavigation();
+    }
   }, [isTvMode]);
 
   // Track route changes and save to settings
@@ -151,6 +158,9 @@ export default function AppLayout() {
         <div
           className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-5 h-10 bg-primary hover:bg-primary/90 rounded-full flex items-center justify-center cursor-pointer shadow-lg z-50 transition-all duration-200 opacity-0 group-hover:opacity-100"
           onClick={toggleSidebar}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSidebar(); } }}
+          tabIndex={0}
+          role="button"
           title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
           data-testid="sidebar-toggle"
         >
