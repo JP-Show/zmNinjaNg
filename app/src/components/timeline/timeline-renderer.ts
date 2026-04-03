@@ -1,7 +1,9 @@
 import {
   format,
+  startOfMinute,
   startOfHour,
   startOfDay,
+  addSeconds,
   addMinutes,
   addHours,
   addDays,
@@ -14,6 +16,13 @@ import {
   timeToX,
   type TimelineEvent,
 } from './timeline-layout';
+
+import {
+  formatAppDate,
+  formatAppTime,
+  formatAppTimeShort,
+  type FormatSettings,
+} from '../../lib/format-date-time';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,46 +112,77 @@ const ONE_MIN = 60_000;
 const ONE_HOUR = 60 * ONE_MIN;
 const ONE_DAY = 24 * ONE_HOUR;
 
-const TICK_INTERVALS: TickInterval[] = [
-  {
-    maxRange: ONE_HOUR,
-    step: (d) => addMinutes(d, 5),
-    start: (d) => startOfHour(d),
-    labelFn: (d) => format(d, 'HH:mm'),
-    majorTest: (d) => d.getMinutes() === 0,
-  },
-  {
-    maxRange: 6 * ONE_HOUR,
-    step: (d) => addMinutes(d, 30),
-    start: (d) => startOfHour(d),
-    labelFn: (d) => format(d, 'HH:mm'),
-    majorTest: (d) => d.getMinutes() === 0,
-  },
-  {
-    maxRange: 48 * ONE_HOUR,
-    step: (d) => addHours(d, 1),
-    start: (d) => startOfDay(d),
-    labelFn: (d) => format(d, 'HH:mm'),
-    majorTest: (d) => d.getHours() === 0,
-    majorLabel: (d) => format(d, 'EEE MMM d'),
-  },
-  {
-    maxRange: 14 * ONE_DAY,
-    step: (d) => addHours(d, 6),
-    start: (d) => startOfDay(d),
-    labelFn: (d) => format(d, 'HH:mm'),
-    majorTest: (d) => d.getHours() === 0,
-    majorLabel: (d) => format(d, 'EEE MMM d'),
-  },
-  {
-    maxRange: Infinity,
-    step: (d) => addDays(d, 1),
-    start: (d) => startOfDay(d),
-    labelFn: (d) => format(d, 'MMM d'),
-    majorTest: (d) => d.getDay() === 1, // Monday
-    majorLabel: (d) => format(d, 'EEE MMM d'),
-  },
-];
+function getTickIntervals(fmt: FormatSettings): TickInterval[] {
+  const fmtTimeSec = (d: Date) => formatAppTime(d, fmt);
+  const fmtTime = (d: Date) => formatAppTimeShort(d, fmt);
+  const fmtDate = (d: Date) => formatAppDate(d, fmt);
+  const fmtDateLong = (d: Date) => {
+    const weekday = format(d, 'EEE');
+    return `${weekday} ${formatAppDate(d, fmt)}`;
+  };
+
+  return [
+    {
+      maxRange: ONE_MIN,
+      step: (d) => addSeconds(d, 5),
+      start: (d) => startOfMinute(d),
+      labelFn: fmtTimeSec,
+      majorTest: (d) => d.getSeconds() === 0,
+    },
+    {
+      maxRange: 5 * ONE_MIN,
+      step: (d) => addSeconds(d, 15),
+      start: (d) => startOfMinute(d),
+      labelFn: fmtTimeSec,
+      majorTest: (d) => d.getSeconds() === 0,
+    },
+    {
+      maxRange: 15 * ONE_MIN,
+      step: (d) => addMinutes(d, 1),
+      start: (d) => startOfHour(d),
+      labelFn: fmtTime,
+      majorTest: (d) => d.getMinutes() % 5 === 0,
+    },
+    {
+      maxRange: ONE_HOUR,
+      step: (d) => addMinutes(d, 5),
+      start: (d) => startOfHour(d),
+      labelFn: fmtTime,
+      majorTest: (d) => d.getMinutes() === 0,
+    },
+    {
+      maxRange: 6 * ONE_HOUR,
+      step: (d) => addMinutes(d, 30),
+      start: (d) => startOfHour(d),
+      labelFn: fmtTime,
+      majorTest: (d) => d.getMinutes() === 0,
+    },
+    {
+      maxRange: 48 * ONE_HOUR,
+      step: (d) => addHours(d, 1),
+      start: (d) => startOfDay(d),
+      labelFn: fmtTime,
+      majorTest: (d) => d.getHours() === 0,
+      majorLabel: fmtDateLong,
+    },
+    {
+      maxRange: 14 * ONE_DAY,
+      step: (d) => addHours(d, 6),
+      start: (d) => startOfDay(d),
+      labelFn: fmtTime,
+      majorTest: (d) => d.getHours() === 0,
+      majorLabel: fmtDateLong,
+    },
+    {
+      maxRange: Infinity,
+      step: (d) => addDays(d, 1),
+      start: (d) => startOfDay(d),
+      labelFn: fmtDate,
+      majorTest: (d) => d.getDay() === 1, // Monday
+      majorLabel: fmtDateLong,
+    },
+  ];
+}
 
 /** Minimum pixel gap between the right edge of one label and the left edge of the next. */
 const MIN_LABEL_GAP_PX = 16;
@@ -158,9 +198,11 @@ export function computeTicks(
   startMs: number,
   endMs: number,
   widthPx: number,
+  fmt: FormatSettings,
 ): TickMark[] {
   const range = endMs - startMs;
-  const interval = TICK_INTERVALS.find((i) => range <= i.maxRange)!;
+  const intervals = getTickIntervals(fmt);
+  const interval = intervals.find((i) => range <= i.maxRange)!;
 
   // Generate all ticks in the range (cap at 500 to avoid runaway)
   const allTicks: TickMark[] = [];
@@ -206,10 +248,11 @@ export function drawTimeAxis(
   ctx: CanvasRenderingContext2D,
   viewport: RenderViewport,
   colors: ThemeColors,
+  fmt: FormatSettings,
 ): void {
   const { dpr, startMs, endMs, width, height } = viewport;
   const headerH = LAYOUT.headerHeight * dpr;
-  const ticks = computeTicks(startMs, endMs, width);
+  const ticks = computeTicks(startMs, endMs, width, fmt);
 
   ctx.save();
 
@@ -243,6 +286,18 @@ export function drawTimeAxis(
       ctx.textBaseline = 'middle';
       ctx.fillText(tick.label, x, headerH / 2);
     }
+  }
+
+  // If no tick has a major (date) label, draw the date once at top-right
+  const hasMajorLabel = ticks.some((t) => t.majorLabel);
+  if (!hasMajorLabel) {
+    const midMs = (startMs + endMs) / 2;
+    const dateStr = formatAppDate(new Date(midMs), fmt);
+    ctx.fillStyle = colors.mutedFg;
+    ctx.font = `${(LAYOUT.fontSize - 1) * dpr}px ${LAYOUT.fontFamily}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(dateStr, (width / 2) * dpr, 3 * dpr);
   }
 
   // Header bottom border
@@ -562,7 +617,8 @@ export function renderTimeline(
   monitorIds: string[],
   viewport: RenderViewport,
   hoveredEventId: string | null,
-  playheadMs?: number | null,
+  playheadMs: number | null | undefined,
+  fmt: FormatSettings,
 ): void {
   const { dpr, width, height } = viewport;
   const w = width * dpr;
@@ -578,7 +634,7 @@ export function renderTimeline(
 
   // Draw layers in order
   drawSwimlanes(ctx, monitors, viewport, colors);
-  drawTimeAxis(ctx, viewport, colors);
+  drawTimeAxis(ctx, viewport, colors, fmt);
   drawEvents(ctx, events, monitorIds, viewport, hoveredEventId);
   drawCurrentTime(ctx, viewport, colors);
   if (playheadMs != null) {

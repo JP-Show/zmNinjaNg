@@ -11,6 +11,7 @@ import { renderTimeline, type MonitorRow, type RenderViewport } from './timeline
 import { hitTest } from './timeline-hit-test';
 import { canvasHeight, LAYOUT, getMonitorColor, type TimelineEvent } from './timeline-layout';
 import { TimelineScrubber, type ScrubberState } from './TimelineScrubber';
+import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 
 interface TimelineCanvasProps {
   monitors: MonitorRow[];
@@ -23,6 +24,8 @@ interface TimelineCanvasProps {
   zoomInKey?: number;
   /** Increment to zoom out by 2x centered */
   zoomOutKey?: number;
+  /** Increment to scroll viewport so NOW is visible */
+  goToNowKey?: number;
   onEventClick: (event: TimelineEvent) => void;
   onEventHover: (event: TimelineEvent | null, x: number, y: number) => void;
   /** Called when a scrubber thumbnail is tapped. */
@@ -31,6 +34,8 @@ interface TimelineCanvasProps {
   onScrubberStateChange?: (state: ScrubberState | null) => void;
   /** Restore scrubber to this state on mount. */
   initialScrubberState?: ScrubberState | null;
+  /** When true, drag selects a region to zoom into instead of panning. */
+  brushMode?: boolean;
 }
 
 const NOW_REFRESH_INTERVAL = 30_000;
@@ -43,17 +48,23 @@ const TimelineCanvasInner = ({
   resetKey,
   zoomInKey,
   zoomOutKey,
+  goToNowKey,
   onEventClick,
   onEventHover,
   onScrubberEventTap,
   onScrubberStateChange,
   initialScrubberState,
+  brushMode,
 }: TimelineCanvasProps) => {
+  const { formatSettings } = useDateTimeFormat();
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrubberWrapRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [scrubberHeight, setScrubberHeight] = useState(0);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const [playheadMs, setPlayheadMs] = useState<number | null>(null);
   const [, setNowTick] = useState(0);
+  const [brushSelection, setBrushSelection] = useState<[number, number] | null>(null);
 
   const viewport = useTimelineViewport({ startMs, endMs });
 
@@ -97,17 +108,33 @@ const TimelineCanvasInner = ({
     }
   }, [zoomOutKey, viewport]);
 
-  // Observe container width
+  // Scroll viewport so NOW is centered, keeping current zoom level
+  const prevGoToNowRef = useRef(goToNowKey);
+  useEffect(() => {
+    if (goToNowKey !== undefined && goToNowKey !== prevGoToNowRef.current) {
+      prevGoToNowRef.current = goToNowKey;
+      const now = Date.now();
+      const dur = viewport.durationMs;
+      viewport.animateToRange(now - dur / 2, now + dur / 2);
+    }
+  }, [goToNowKey, viewport]);
+
+  // Observe container width + scrubber height
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
+        if (entry.target === el) {
+          setContainerWidth(entry.contentRect.width);
+        } else if (entry.target === scrubberWrapRef.current) {
+          setScrubberHeight(entry.contentRect.height + 8); // +8 for pt-2 padding
+        }
       }
     });
     ro.observe(el);
+    if (scrubberWrapRef.current) ro.observe(scrubberWrapRef.current);
     return () => ro.disconnect();
   }, []);
 
@@ -161,12 +188,36 @@ const TimelineCanvasInner = ({
     [events, monitorIds, viewport.startMs, viewport.endMs, containerWidth, onEventClick],
   );
 
+  const handleBrushZoom = useCallback(
+    (startNorm: number, endNorm: number) => {
+      const rangeStart = viewport.normToTime(startNorm);
+      const rangeEnd = viewport.normToTime(endNorm);
+      viewport.animateToRange(rangeStart, rangeEnd);
+      setBrushSelection(null);
+    },
+    [viewport],
+  );
+
+  const handleBrushUpdate = useCallback(
+    (startNorm: number, endNorm: number) => {
+      if (startNorm === 0 && endNorm === 0) {
+        setBrushSelection(null);
+      } else {
+        setBrushSelection([startNorm, endNorm]);
+      }
+    },
+    [],
+  );
+
   const canvasRef = useTimelineGestures({
     onPan: handlePan,
     onZoom: handleZoom,
     onHover: handleHover,
     onHoverEnd: handleHoverEnd,
     onClick: handleClick,
+    brushMode,
+    onBrushZoom: handleBrushZoom,
+    onBrushUpdate: handleBrushUpdate,
   });
 
   // Render loop
@@ -191,7 +242,34 @@ const TimelineCanvasInner = ({
       dpr,
     };
 
-    renderTimeline(ctx, canvas, monitors, events, monitorIds, renderVp, hoveredEventId, playheadMs);
+    renderTimeline(ctx, canvas, monitors, events, monitorIds, renderVp, hoveredEventId, playheadMs, formatSettings);
+
+    // Draw brush selection overlay
+    if (brushSelection) {
+      const [lo, hi] = brushSelection;
+      const x1 = lo * containerWidth * dpr;
+      const x2 = hi * containerWidth * dpr;
+      const h = height * dpr;
+
+      // Dim areas outside selection
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(0, 0, x1, h);
+      ctx.fillRect(x2, 0, containerWidth * dpr - x2, h);
+
+      // Selection highlight
+      ctx.fillStyle = 'rgba(0, 168, 255, 0.15)';
+      ctx.fillRect(x1, 0, x2 - x1, h);
+
+      // Selection borders
+      ctx.strokeStyle = '#00a8ff';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(x1, 0);
+      ctx.lineTo(x1, h);
+      ctx.moveTo(x2, 0);
+      ctx.lineTo(x2, h);
+      ctx.stroke();
+    }
   });
 
   return (
@@ -200,7 +278,7 @@ const TimelineCanvasInner = ({
       className="relative w-full overflow-hidden rounded-lg border border-border bg-background"
     >
       {/* Scrubber bar — above time labels */}
-      <div className="px-2 pt-2">
+      <div ref={scrubberWrapRef} className="px-2 pt-2">
         <TimelineScrubber
           events={events}
           monitors={monitors}
@@ -221,7 +299,7 @@ const TimelineCanvasInner = ({
       {/* Monitor name sidebar with gradient fade to avoid obscuring events */}
       <div
         className="absolute left-0 z-10 pointer-events-none"
-        style={{ top: LAYOUT.headerHeight }}
+        style={{ top: scrubberHeight + LAYOUT.headerHeight }}
         data-testid="timeline-monitor-labels"
       >
         {monitors.map((monitor, index) => (

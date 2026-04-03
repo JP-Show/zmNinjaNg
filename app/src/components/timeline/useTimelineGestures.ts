@@ -13,6 +13,12 @@ export interface GestureCallbacks {
   onHover: (x: number, y: number) => void;
   onHoverEnd: () => void;
   onClick: (x: number, y: number) => void;
+  /** When true, drag selects a region instead of panning. */
+  brushMode?: boolean;
+  /** Drag-select zoom: called with normalized start/end (0–1) when user releases a brush selection. */
+  onBrushZoom?: (startNorm: number, endNorm: number) => void;
+  /** Called during brush drag with current selection bounds (norm) for overlay rendering, or null when not brushing. */
+  onBrushUpdate?: (startNorm: number, endNorm: number) => void;
 }
 
 const CLICK_THRESHOLD_PX = 3;
@@ -36,6 +42,10 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
     let dragStartY = 0;
     let lastX = 0;
     let dragMoved = false;
+
+    // --- brush (shift+drag) state ---
+    let brushing = false;
+    let brushStartNorm = 0;
 
     // --- pinch state ---
     let pinchDist = 0;
@@ -61,6 +71,15 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
 
     function onMouseDown(e: MouseEvent) {
       if (e.button !== 0) return;
+
+      // Brush mode (toggle button) or Shift+drag: select a region to zoom into
+      if ((cbRef.current.brushMode || e.shiftKey) && cbRef.current.onBrushZoom) {
+        brushing = true;
+        brushStartNorm = normX(e.clientX);
+        canvas!.style.cursor = 'col-resize';
+        return;
+      }
+
       dragging = true;
       dragMoved = false;
       dragStartX = e.clientX;
@@ -70,6 +89,13 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
     }
 
     function onMouseMove(e: MouseEvent) {
+      if (brushing) {
+        const currentNorm = normX(e.clientX);
+        const lo = Math.min(brushStartNorm, currentNorm);
+        const hi = Math.max(brushStartNorm, currentNorm);
+        cbRef.current.onBrushUpdate?.(lo, hi);
+        return;
+      }
       if (dragging) {
         const dx = e.clientX - lastX;
         lastX = e.clientX;
@@ -86,6 +112,21 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
     }
 
     function onMouseUp(e: MouseEvent) {
+      if (brushing) {
+        brushing = false;
+        canvas!.style.cursor = 'grab';
+        const endNorm = normX(e.clientX);
+        const lo = Math.min(brushStartNorm, endNorm);
+        const hi = Math.max(brushStartNorm, endNorm);
+        cbRef.current.onBrushUpdate?.(lo, hi);
+        // Only zoom if selection is meaningful (at least 1% of width)
+        if (hi - lo > 0.01) {
+          cbRef.current.onBrushZoom?.(lo, hi);
+        }
+        // Clear overlay after a short delay to let the zoom animation start
+        setTimeout(() => cbRef.current.onBrushUpdate?.(0, 0), 50);
+        return;
+      }
       if (!dragging) return;
       dragging = false;
       canvas!.style.cursor = 'grab';
@@ -96,6 +137,11 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
     }
 
     function onMouseLeave() {
+      if (brushing) {
+        brushing = false;
+        canvas!.style.cursor = 'grab';
+        cbRef.current.onBrushUpdate?.(0, 0);
+      }
       if (dragging) {
         dragging = false;
         canvas!.style.cursor = 'grab';
@@ -119,6 +165,12 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
 
     function onTouchStart(e: TouchEvent) {
       if (e.touches.length === 1) {
+        // In brush mode, single-finger drag selects a region
+        if (cbRef.current.brushMode && cbRef.current.onBrushZoom) {
+          brushing = true;
+          brushStartNorm = normX(e.touches[0].clientX);
+          return;
+        }
         dragging = true;
         touchMoved = false;
         touchStartX = e.touches[0].clientX;
@@ -126,6 +178,8 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
         touchLastX = e.touches[0].clientX;
       } else if (e.touches.length === 2) {
         dragging = false;
+        brushing = false;
+        cbRef.current.onBrushUpdate?.(0, 0);
         pinchDist = touchDist(e.touches[0], e.touches[1]);
         const midClientX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         pinchMidNormX = normX(midClientX);
@@ -134,6 +188,13 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
 
     function onTouchMove(e: TouchEvent) {
       e.preventDefault();
+      if (brushing && e.touches.length === 1) {
+        const currentNorm = normX(e.touches[0].clientX);
+        const lo = Math.min(brushStartNorm, currentNorm);
+        const hi = Math.max(brushStartNorm, currentNorm);
+        cbRef.current.onBrushUpdate?.(lo, hi);
+        return;
+      }
       if (e.touches.length === 1 && dragging) {
         const dx = e.touches[0].clientX - touchLastX;
         touchLastX = e.touches[0].clientX;
@@ -154,6 +215,18 @@ export function useTimelineGestures(callbacks: GestureCallbacks): RefObject<HTML
     }
 
     function onTouchEnd(e: TouchEvent) {
+      if (brushing && e.touches.length === 0) {
+        brushing = false;
+        // Use last known position — changedTouches has the lifted finger
+        const endNorm = normX(e.changedTouches[0].clientX);
+        const lo = Math.min(brushStartNorm, endNorm);
+        const hi = Math.max(brushStartNorm, endNorm);
+        if (hi - lo > 0.01) {
+          cbRef.current.onBrushZoom?.(lo, hi);
+        }
+        setTimeout(() => cbRef.current.onBrushUpdate?.(0, 0), 50);
+        return;
+      }
       if (e.touches.length === 0) {
         if (dragging && !touchMoved) {
           const pos = canvasRelative(touchStartX, touchStartY);

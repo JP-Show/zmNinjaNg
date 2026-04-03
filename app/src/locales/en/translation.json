@@ -939,7 +939,18 @@
     "events_loaded": "{{count}} events",
     "pinch_to_zoom": "Scroll/pinch to zoom",
     "no_events_in_range": "No events in this time range",
-    "center_view": "Center"
+    "center_view": "Center",
+    "go_to_now": "Now",
+    "select_to_zoom": "Select to zoom",
+    "help": {
+      "title": "Controls",
+      "navigate": "Pinch/drag/scroll",
+      "brush": "Select area to zoom",
+      "shift_drag": "Shift+drag to select",
+      "scrubber": "Scrub for events",
+      "center": "Fit to range",
+      "go_now": "Jump to now"
+    }
   },
   "error": {
     "something_went_wrong": "Something went wrong",

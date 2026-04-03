@@ -40,5 +40,12 @@ export function useDateTimeFormat() {
     [settings.dateFormat, settings.timeFormat, settings.customDateFormat, settings.customTimeFormat]
   );
 
-  return { fmtDate, fmtTime, fmtTimeShort, fmtDateTime, fmtDateTimeShort };
+  const formatSettings = {
+    dateFormat: settings.dateFormat,
+    timeFormat: settings.timeFormat,
+    customDateFormat: settings.customDateFormat,
+    customTimeFormat: settings.customTimeFormat,
+  };
+
+  return { fmtDate, fmtTime, fmtTimeShort, fmtDateTime, fmtDateTimeShort, formatSettings };
 }

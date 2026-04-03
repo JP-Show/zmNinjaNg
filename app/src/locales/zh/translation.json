@@ -939,7 +939,18 @@
     "events_loaded": "{{count}} 个事件",
     "pinch_to_zoom": "滚动/捏合缩放",
     "no_events_in_range": "此时间范围内无事件",
-    "center_view": "居中"
+    "center_view": "居中",
+    "go_to_now": "现在",
+    "select_to_zoom": "选择缩放",
+    "help": {
+      "title": "操作",
+      "navigate": "捏合/拖动/滚动导航",
+      "brush": "选择区域缩放",
+      "shift_drag": "Shift+拖动选择",
+      "scrubber": "滑动查看事件",
+      "center": "适应范围",
+      "go_now": "跳到现在"
+    }
   },
   "error": {
     "something_went_wrong": "出错了",

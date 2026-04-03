@@ -7,12 +7,12 @@
  */
 
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { format } from 'date-fns';
 import { VideoOff } from 'lucide-react';
 import { getEventImageUrl } from '../../api/events';
 import { useCurrentProfile } from '../../hooks/useCurrentProfile';
 import { useAuthStore } from '../../stores/auth';
-import type { TimelineEvent } from './timeline-layout';
+import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
+import { LAYOUT, type TimelineEvent } from './timeline-layout';
 import type { MonitorRow } from './timeline-renderer';
 
 /** Serializable scrubber state for navigation restore. */
@@ -43,16 +43,33 @@ interface TimelineScrubberProps {
  * the scrubber "snaps" to events even when bars are visually thin.
  * At minimum 30s tolerance, plus 1% of the visible range.
  */
-function eventsNearTime(
+/**
+ * Find events whose rendered bar overlaps the handle position in pixel space.
+ * Matches the same min-width logic used by the canvas renderer and hit-test.
+ */
+function eventsAtHandle(
   events: TimelineEvent[],
-  timeMs: number,
-  viewDurationMs: number,
+  handleNorm: number,
+  viewStartMs: number,
+  viewEndMs: number,
+  trackWidthPx: number,
 ): TimelineEvent[] {
-  // 1% of visible range or 30s, whichever is larger
-  const tolerance = Math.max(30_000, viewDurationMs * 0.01);
-  return events.filter(
-    (ev) => ev.startMs <= timeMs + tolerance && ev.endMs >= timeMs - tolerance,
-  );
+  const handlePx = handleNorm * trackWidthPx;
+  const range = viewEndMs - viewStartMs;
+  const minBarPx = LAYOUT.eventMinWidth;
+
+  return events.filter((ev) => {
+    let leftPx = ((ev.startMs - viewStartMs) / range) * trackWidthPx;
+    let rightPx = ((ev.endMs - viewStartMs) / range) * trackWidthPx;
+    const barWidth = rightPx - leftPx;
+    // Match canvas min-width expansion
+    if (barWidth < minBarPx) {
+      const center = (leftPx + rightPx) / 2;
+      leftPx = center - minBarPx / 2;
+      rightPx = center + minBarPx / 2;
+    }
+    return handlePx >= leftPx && handlePx <= rightPx;
+  });
 }
 
 function ScrubberThumbnail({
@@ -66,6 +83,7 @@ function ScrubberThumbnail({
 }) {
   const { currentProfile } = useCurrentProfile();
   const accessToken = useAuthStore((s) => s.accessToken);
+  const { fmtTimeShort } = useDateTimeFormat();
   const [failed, setFailed] = useState(false);
 
   const portalUrl = currentProfile?.portalUrl ?? '';
@@ -93,8 +111,9 @@ function ScrubberThumbnail({
           onError={() => setFailed(true)}
         />
       )}
-      <span className="absolute bottom-0 left-0 right-0 text-[8px] text-white bg-black/70 px-1 truncate">
-        {monitorName}
+      <span className="absolute bottom-0 left-0 right-0 text-[8px] text-white bg-black/70 px-1 flex min-w-0">
+        <span className="truncate">{monitorName}</span>
+        <span className="shrink-0"> · {fmtTimeShort(new Date(event.startMs))}</span>
       </span>
     </button>
   );
@@ -111,10 +130,12 @@ function TimelineScrubberComponent({
   initialState,
   thumbnailPosition = 'above',
 }: TimelineScrubberProps) {
+  const { fmtDateTime } = useDateTimeFormat();
   const trackRef = useRef<HTMLDivElement>(null);
   const [scrubbing, setScrubbing] = useState(false);
   const [handleNorm, setHandleNorm] = useState(initialState?.handleNorm ?? 0.5);
   const [activeEvents, setActiveEvents] = useState<TimelineEvent[]>([]);
+  const [hasInteracted, setHasInteracted] = useState(!!initialState);
 
   // Restore state when initialState changes (e.g., navigating back)
   const lastRestoredRef = useRef<ScrubberState | null>(null);
@@ -154,7 +175,7 @@ function TimelineScrubberComponent({
       // Debounce thumbnail lookup (150ms)
       clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        setActiveEvents(eventsNearTime(events, timeMs, viewEndMs - viewStartMs));
+        setActiveEvents(eventsAtHandle(events, norm, viewStartMs, viewEndMs, rect.width));
       }, 150);
     },
     [events, normToTime, onPlayheadChange, viewStartMs, viewEndMs],
@@ -166,6 +187,7 @@ function TimelineScrubberComponent({
       e.preventDefault();
       setActiveEvents([]); // clear stale thumbnails so they don't block
       setScrubbing(true);
+      setHasInteracted(true);
       updateScrub(e.clientX);
     },
     [updateScrub],
@@ -190,6 +212,7 @@ function TimelineScrubberComponent({
     (e: React.TouchEvent) => {
       setActiveEvents([]); // clear stale thumbnails so they don't block
       setScrubbing(true);
+      setHasInteracted(true);
       updateScrub(e.touches[0].clientX);
     },
     [updateScrub],
@@ -209,6 +232,7 @@ function TimelineScrubberComponent({
   // Dismiss thumbnails when tapping outside
   const dismissThumbnails = useCallback(() => {
     setActiveEvents([]);
+    setHasInteracted(false);
     onPlayheadChange(null);
     onStateChange?.(null);
   }, [onPlayheadChange, onStateChange]);
@@ -230,8 +254,26 @@ function TimelineScrubberComponent({
 
   const below = thumbnailPosition === 'below';
 
+  const timeLabelEl = (
+    <div className="text-[10px] text-center text-muted-foreground pointer-events-none whitespace-nowrap">
+      {fmtDateTime(new Date(playheadTime))}
+    </div>
+  );
+
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const [thumbHeight, setThumbHeight] = useState(0);
+
+  useEffect(() => {
+    if (thumbRef.current) {
+      setThumbHeight(thumbRef.current.offsetHeight);
+    } else {
+      setThumbHeight(0);
+    }
+  }, [activeEvents]);
+
   const thumbnailStrip = activeEvents.length > 0 && (
     <div
+      ref={thumbRef}
       className={`absolute ${below ? 'top-full mt-2' : 'bottom-full mb-2'} ${scrubbing ? 'pointer-events-none' : 'pointer-events-auto'} z-20`}
       style={{
         left: `${handleNorm * 100}%`,
@@ -258,12 +300,23 @@ function TimelineScrubberComponent({
     </div>
   );
 
-  const timeLabel = (scrubbing || activeEvents.length > 0) && (
+  // Floating time label: below thumbnails when visible, otherwise just below the bar.
+  // Extra 20px gap when thumbnails show to clear any horizontal scrollbar.
+  const timeLabel = (scrubbing || hasInteracted) && (
     <div
-      className={`absolute ${below ? 'top-full mt-1' : 'bottom-full mb-1'} text-[10px] text-muted-foreground bg-popover border border-border rounded px-1.5 py-0.5 -translate-x-1/2 pointer-events-none z-10`}
-      style={{ left: `${handleNorm * 100}%` }}
+      className={`absolute ${below ? 'top-full' : 'bottom-full'} bg-popover/95 border border-border rounded px-1.5 py-0.5 -translate-x-1/2 pointer-events-none z-30 backdrop-blur-sm`}
+      style={{
+        left: `${handleNorm * 100}%`,
+        ...(thumbHeight > 0
+          ? below
+            ? { marginTop: `${thumbHeight + 24}px` }
+            : { marginBottom: `${thumbHeight + 24}px` }
+          : below
+            ? { marginTop: '0.25rem' }
+            : { marginBottom: '0.25rem' }),
+      }}
     >
-      {format(new Date(playheadTime), 'MMM d, HH:mm:ss')}
+      {timeLabelEl}
     </div>
   );
 
@@ -274,9 +327,9 @@ function TimelineScrubberComponent({
         <div className="fixed inset-0 z-10" onClick={dismissThumbnails} />
       )}
 
-      {/* Time label + thumbnails — position depends on prop */}
-      {timeLabel}
+      {/* Thumbnails + floating time label */}
       {thumbnailStrip}
+      {timeLabel}
 
       {/* Scrubber track — z-30 so it's always above the dismiss backdrop (z-10) and thumbnails (z-20) */}
       <div

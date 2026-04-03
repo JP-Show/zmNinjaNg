@@ -15,7 +15,9 @@ export interface DateRange {
 
 export interface QuickDateRangeButtonsProps {
   /** Callback when a date range is selected */
-  onRangeSelect: (range: DateRange) => void;
+  onRangeSelect: (range: DateRange & { hours: number }) => void;
+  /** Currently active range in hours (highlights the button) */
+  activeHours?: number | null;
   /** Button variant (default: 'outline') */
   variant?: 'outline' | 'default';
   /** Button size (default: 'sm') */
@@ -31,6 +33,7 @@ export interface QuickDateRangeButtonsProps {
  */
 export function QuickDateRangeButtons({
   onRangeSelect,
+  activeHours,
   variant = 'outline',
   size = 'sm',
   className = 'text-xs h-7 px-3',
@@ -84,23 +87,26 @@ export function QuickDateRangeButtons({
   const handleRangeClick = (hours: number) => {
     const end = new Date();
     const start = new Date(end.getTime() - hours * 60 * 60 * 1000);
-    onRangeSelect({ start, end });
+    onRangeSelect({ start, end, hours });
   };
 
   return (
     <div className={gridClassName}>
-      {ranges.map(({ hours, label, fullLabel }) => (
-        <Button
-          key={hours}
-          variant={variant}
-          size={size}
-          className={className}
-          onClick={() => handleRangeClick(hours)}
-          title={fullLabel}
-        >
-          {label}
-        </Button>
-      ))}
+      {ranges.map(({ hours, label, fullLabel }) => {
+        const isActive = activeHours === hours;
+        return (
+          <Button
+            key={hours}
+            variant={isActive ? 'default' : variant}
+            size={size}
+            className={className}
+            onClick={() => handleRangeClick(hours)}
+            title={fullLabel}
+          >
+            {label}
+          </Button>
+        );
+      })}
     </div>
   );
 }

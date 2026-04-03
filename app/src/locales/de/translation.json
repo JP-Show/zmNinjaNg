@@ -939,7 +939,18 @@
     "events_loaded": "{{count}} Ereignisse",
     "pinch_to_zoom": "Scrollen/Pinch zum Zoomen",
     "no_events_in_range": "Keine Ereignisse in diesem Zeitraum",
-    "center_view": "Zentrieren"
+    "center_view": "Zentrieren",
+    "go_to_now": "Jetzt",
+    "select_to_zoom": "Bereich wählen",
+    "help": {
+      "title": "Steuerung",
+      "navigate": "Pinch/Ziehen/Scrollen",
+      "brush": "Bereich zum Zoomen",
+      "shift_drag": "Shift+Ziehen zum Wählen",
+      "scrubber": "Scrub für Ereignisse",
+      "center": "An Bereich anpassen",
+      "go_now": "Zu Jetzt springen"
+    }
   },
   "error": {
     "something_went_wrong": "Etwas ist schief gelaufen",

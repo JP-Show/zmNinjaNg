@@ -9,7 +9,7 @@ import { format as dateFnsFormat } from 'date-fns';
 import type { DateFormatPreset, TimeFormatPreset } from '../stores/settings';
 import { log, LogLevel } from './logger';
 
-interface FormatSettings {
+export interface FormatSettings {
   dateFormat: DateFormatPreset;
   timeFormat: TimeFormatPreset;
   customDateFormat: string;

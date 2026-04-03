@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Switch } from '../components/ui/switch';
-import { RefreshCw, Filter, Clock, ScanSearch, X, Crosshair, ZoomIn, ZoomOut, ChevronDown } from 'lucide-react';
+import { RefreshCw, Filter, Clock, ScanSearch, X, Crosshair, ZoomIn, ZoomOut, ChevronDown, SkipForward, RectangleHorizontal, Info, Move, HandMetal } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { filterEnabledMonitors } from '../lib/filters';
 import { formatForServer } from '../lib/time';
@@ -53,6 +53,12 @@ export default function Timeline() {
   // Detection filter state
   const [detectionCategory, setDetectionCategory] = useState<DetectionCategory>('all');
 
+  // Track which quick range button is active
+  const [activeQuickRange, setActiveQuickRange] = useState<number | null>(null);
+
+  // Brush-to-zoom mode toggle
+  const [brushMode, setBrushMode] = useState(false);
+
   // Filters section collapsed state
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
@@ -60,6 +66,7 @@ export default function Timeline() {
   const [resetKey, setResetKey] = useState(0);
   const [zoomInKey, setZoomInKey] = useState(0);
   const [zoomOutKey, setZoomOutKey] = useState(0);
+  const [goToNowKey, setGoToNowKey] = useState(0);
 
   // Scrubber state — persisted to sessionStorage so it survives any back navigation
   const SCRUBBER_KEY = 'timeline-scrubber-state';
@@ -311,7 +318,7 @@ export default function Timeline() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => { clearFilters(); defaultDates.current = { start: format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"), end: format(new Date(), "yyyy-MM-dd'T'HH:mm") }; }} variant="outline" size="sm" className="h-8 sm:h-9" data-testid="timeline-reset-button">
+          <Button onClick={() => { clearFilters(); setActiveQuickRange(null); defaultDates.current = { start: format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm"), end: format(new Date(), "yyyy-MM-dd'T'HH:mm") }; }} variant="outline" size="sm" className="h-8 sm:h-9" data-testid="timeline-reset-button">
             <RefreshCw className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">{t('common.reset')}</span>
           </Button>
@@ -343,7 +350,7 @@ export default function Timeline() {
                 id="startDate"
                 type="datetime-local"
                 value={startDate}
-                onChange={(e) => setStartDateInput(e.target.value)}
+                onChange={(e) => { setStartDateInput(e.target.value); setActiveQuickRange(null); }}
                 data-testid="timeline-start-date"
               />
             </div>
@@ -353,7 +360,7 @@ export default function Timeline() {
                 id="endDate"
                 type="datetime-local"
                 value={endDate}
-                onChange={(e) => setEndDateInput(e.target.value)}
+                onChange={(e) => { setEndDateInput(e.target.value); setActiveQuickRange(null); }}
                 data-testid="timeline-end-date"
               />
             </div>
@@ -401,14 +408,16 @@ export default function Timeline() {
             <div className="flex-1">
               <Label className="text-xs text-muted-foreground">{t('events.quick_ranges')}</Label>
               <QuickDateRangeButtons
-                onRangeSelect={({ start, end }) => {
+                activeHours={activeQuickRange}
+                onRangeSelect={({ start, end, hours }) => {
                   setStartDateInput(format(start, "yyyy-MM-dd'T'HH:mm"));
                   setEndDateInput(format(end, "yyyy-MM-dd'T'HH:mm"));
+                  setActiveQuickRange(hours);
                 }}
               />
             </div>
             {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground" data-testid="timeline-clear-filters">
+              <Button variant="ghost" size="sm" onClick={() => { clearFilters(); setActiveQuickRange(null); }} className="text-muted-foreground" data-testid="timeline-clear-filters">
                 <X className="h-4 w-4 mr-1" />
                 {t('common.clear')}
               </Button>
@@ -446,41 +455,92 @@ export default function Timeline() {
             </div>
           ) : (
             <div className="p-4" data-testid="timeline-content">
-              <div className="mb-2 flex items-center justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground"
-                  onClick={() => setZoomInKey((k) => k + 1)}
-                  title="Zoom in"
-                  data-testid="timeline-zoom-in-button"
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground"
-                  onClick={() => setZoomOutKey((k) => k + 1)}
-                  title="Zoom out"
-                  data-testid="timeline-zoom-out-button"
-                >
-                  <ZoomOut className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground"
-                  onClick={() => setResetKey((k) => k + 1)}
-                  title={t('timeline.center_view')}
-                  data-testid="timeline-center-button"
-                >
-                  <Crosshair className="h-3.5 w-3.5" />
-                </Button>
-                <span className="text-muted-foreground/30">|</span>
-                <span className="text-xs text-muted-foreground/50">
-                  {t('timeline.pinch_to_zoom')}
-                </span>
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground"
+                    onClick={() => setZoomInKey((k) => k + 1)}
+                    title="Zoom in"
+                    data-testid="timeline-zoom-in-button"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground"
+                    onClick={() => setZoomOutKey((k) => k + 1)}
+                    title="Zoom out"
+                    data-testid="timeline-zoom-out-button"
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant={brushMode ? 'default' : 'ghost'}
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground"
+                    onClick={() => setBrushMode((b) => !b)}
+                    title={t('timeline.select_to_zoom')}
+                    data-testid="timeline-brush-zoom-button"
+                  >
+                    <RectangleHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground"
+                    onClick={() => setResetKey((k) => k + 1)}
+                    title={t('timeline.center_view')}
+                    data-testid="timeline-center-button"
+                  >
+                    <Crosshair className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground"
+                    onClick={() => setGoToNowKey((k) => k + 1)}
+                    title={t('timeline.go_to_now')}
+                    data-testid="timeline-go-to-now-button"
+                  >
+                    <SkipForward className="h-3.5 w-3.5" />
+                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground"
+                        data-testid="timeline-help-button"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto text-xs space-y-1.5 p-3" side="bottom" align="end">
+                      {(() => {
+                        const hasPointer = window.matchMedia('(pointer: fine)').matches;
+                        const HelpRow = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
+                          <div className="flex items-center gap-2 text-muted-foreground">{icon}{text}</div>
+                        );
+                        return (
+                          <>
+                            <p className="font-medium text-foreground mb-2">{t('timeline.help.title')}</p>
+                            <HelpRow icon={<Move className="h-3.5 w-3.5 shrink-0 text-foreground/60" />} text={t('timeline.help.navigate')} />
+                            <HelpRow icon={<RectangleHorizontal className="h-3.5 w-3.5 shrink-0 text-foreground/60" />} text={t('timeline.help.brush')} />
+                            {hasPointer && <HelpRow icon={<HandMetal className="h-3.5 w-3.5 shrink-0 text-foreground/60" />} text={t('timeline.help.shift_drag')} />}
+                            <HelpRow icon={<span className="inline-block h-3.5 w-3.5 shrink-0 rounded-full" style={{ backgroundColor: '#00a8ff' }} />} text={t('timeline.help.scrubber')} />
+                            <HelpRow icon={<Crosshair className="h-3.5 w-3.5 shrink-0 text-foreground/60" />} text={t('timeline.help.center')} />
+                            <HelpRow icon={<SkipForward className="h-3.5 w-3.5 shrink-0 text-foreground/60" />} text={t('timeline.help.go_now')} />
+                          </>
+                        );
+                      })()}
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <TimelineCanvas
                 monitors={monitorRows}
@@ -490,11 +550,13 @@ export default function Timeline() {
                 resetKey={resetKey}
                 zoomInKey={zoomInKey}
                 zoomOutKey={zoomOutKey}
+                goToNowKey={goToNowKey}
                 onEventClick={handleEventClick}
                 onEventHover={handleEventHover}
                 onScrubberEventTap={navigateToEvent}
                 onScrubberStateChange={handleScrubberStateChange}
                 initialScrubberState={initialScrubberState}
+                brushMode={brushMode}
               />
             </div>
           )}
