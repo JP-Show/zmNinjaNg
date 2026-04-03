@@ -198,11 +198,6 @@ public class TvCursorLayout extends FrameLayout {
                 cursorSpeed.x = 0;
                 break;
         }
-        // End scroll gesture when all directions released
-        if (direction.x == 0 && direction.y == 0) {
-            View child = getChildAt(0);
-            if (child != null) endScrollGesture(child);
-        }
     }
 
     private boolean handleSelectKey(boolean isDown) {
@@ -255,96 +250,67 @@ public class TvCursorLayout extends FrameLayout {
         event.recycle();
     }
 
-    // Scroll gesture state
-    private boolean scrollGestureActive = false;
-    private final PointF scrollTouchStart = new PointF();
-    private final PointF scrollTouchCurrent = new PointF();
-    private long scrollDownTime = 0;
-    private static final float SCROLL_INSET = 300f;
-
     private void handleEdgeScroll() {
         View child = getChildAt(0);
-        if (child == null) return;
+        if (!(child instanceof WebView)) return;
 
         float scrollSpeed = Math.max(Math.abs(cursorSpeed.x), Math.abs(cursorSpeed.y));
-        if (scrollSpeed < 1) {
-            endScrollGesture(child);
-            return;
-        }
+        if (scrollSpeed < 1) return;
 
-        float scrollDx = 0, scrollDy = 0;
+        int scrollDx = 0, scrollDy = 0;
 
         // Check if cursor is near edges
         if (cursorPos.y < scrollPadding) {
-            scrollDy = -scrollSpeed * 0.8f;
+            scrollDy = (int) (-scrollSpeed * 2f);
         } else if (cursorPos.y > getHeight() - scrollPadding) {
-            scrollDy = scrollSpeed * 0.8f;
+            scrollDy = (int) (scrollSpeed * 2f);
         }
         if (cursorPos.x < scrollPadding) {
-            scrollDx = -scrollSpeed * 0.8f;
+            scrollDx = (int) (-scrollSpeed * 2f);
         } else if (cursorPos.x > getWidth() - scrollPadding) {
-            scrollDx = scrollSpeed * 0.8f;
+            scrollDx = (int) (scrollSpeed * 2f);
         }
 
-        if (scrollDx == 0 && scrollDy == 0) {
-            endScrollGesture(child);
-            return;
-        }
+        if (scrollDx == 0 && scrollDy == 0) return;
 
-        // Synthesize a touch drag gesture so CSS overflow scrolling works
-        if (!scrollGestureActive) {
-            // Start a new drag gesture from center of screen
-            scrollGestureActive = true;
-            scrollDownTime = SystemClock.uptimeMillis();
-            float startX = Math.max(SCROLL_INSET, Math.min(getWidth() - SCROLL_INSET, getWidth() / 2f));
-            float startY = Math.max(SCROLL_INSET, Math.min(getHeight() - SCROLL_INSET, getHeight() / 2f));
-            scrollTouchStart.set(startX, startY);
-            scrollTouchCurrent.set(startX, startY);
-            dispatchSyntheticTouch(child, MotionEvent.ACTION_DOWN, scrollTouchCurrent.x, scrollTouchCurrent.y, scrollDownTime);
-        }
-
-        // Move the fake touch point opposite to scroll direction
-        scrollTouchCurrent.x -= scrollDx;
-        scrollTouchCurrent.y -= scrollDy;
-
-        // If touch point drifts too far, restart the gesture
-        float dx = scrollTouchCurrent.x - scrollTouchStart.x;
-        float dy = scrollTouchCurrent.y - scrollTouchStart.y;
-        if (Math.abs(dx) > SCROLL_INSET - 50 || Math.abs(dy) > SCROLL_INSET - 50) {
-            // Cancel and restart
-            dispatchSyntheticTouch(child, MotionEvent.ACTION_CANCEL, scrollTouchCurrent.x, scrollTouchCurrent.y, scrollDownTime);
-            scrollGestureActive = false;
-            return;
-        }
-
-        dispatchSyntheticTouch(child, MotionEvent.ACTION_MOVE, scrollTouchCurrent.x, scrollTouchCurrent.y, scrollDownTime);
-    }
-
-    private void endScrollGesture(View child) {
-        if (scrollGestureActive) {
-            dispatchSyntheticTouch(child, MotionEvent.ACTION_UP, scrollTouchCurrent.x, scrollTouchCurrent.y, scrollDownTime);
-            scrollGestureActive = false;
-        }
-    }
-
-    private void dispatchSyntheticTouch(View target, int action, float x, float y, long downTime) {
-        long now = SystemClock.uptimeMillis();
-        MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[1];
-        props[0] = new MotionEvent.PointerProperties();
-        props[0].id = 1; // Use different pointer ID than cursor clicks (id=0)
-        props[0].toolType = MotionEvent.TOOL_TYPE_FINGER;
-
-        MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[1];
-        coords[0] = new MotionEvent.PointerCoords();
-        coords[0].x = x;
-        coords[0].y = y;
-        coords[0].pressure = 1f;
-        coords[0].size = 1f;
-
-        MotionEvent event = MotionEvent.obtain(downTime, now, action, 1, props, coords,
-                0, 0, 1f, 1f, 1, 0, 0, 0);
-        target.dispatchTouchEvent(event);
-        event.recycle();
+        // Use JavaScript to scroll the element under the cursor.
+        // This avoids synthetic touch events that accidentally click buttons.
+        // Coordinates must be converted from native pixels to CSS pixels.
+        WebView webView = (WebView) child;
+        float midY = getHeight() / 2f;
+        float midX = getWidth() / 2f;
+        String js = String.format(
+            "(function(){" +
+            "  var dpr = window.devicePixelRatio || 1;" +
+            "  var x = %f / dpr;" +
+            "  var y = %f / dpr;" +
+            "  var dx = %d;" +
+            "  var dy = %d;" +
+            "  function findScrollable(px, py) {" +
+            "    var el = document.elementFromPoint(px, py);" +
+            "    while (el) {" +
+            "      var style = window.getComputedStyle(el);" +
+            "      var oy = style.overflowY;" +
+            "      var ox = style.overflowX;" +
+            "      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;" +
+            "      if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth) return el;" +
+            "      el = el.parentElement;" +
+            "    }" +
+            "    return null;" +
+            "  }" +
+            // Try at cursor position first; if nothing found (cursor may be
+            // over a fixed header/footer), retry at the same X but mid-screen Y
+            // to find the scrollable container in the same column
+            "  var target = findScrollable(x, y);" +
+            "  if (!target) target = findScrollable(x, %f / dpr);" +
+            "  if (target) { target.scrollBy(dx, dy); }" +
+            "  else { window.scrollBy(dx, dy); }" +
+            "})();",
+            cursorPos.x, cursorPos.y,
+            scrollDx, scrollDy,
+            midY
+        );
+        webView.evaluateJavascript(js, null);
     }
 
     private void showCursor() {
