@@ -20,14 +20,14 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { useTranslation } from 'react-i18next';
 import { BackgroundTaskDrawer } from '../BackgroundTaskDrawer';
 import { CertTrustDialog } from '../CertTrustDialog';
 import { onCertTrustRequest, type PendingCertTrust } from '../../lib/cert-trust-event';
 import { useTvMode } from '../../hooks/useTvMode';
-import { enableSpatialNavigation } from '../../lib/tv-spatial-nav';
+import { enableSpatialNavigation, checkIsTV } from '../../lib/tv-spatial-nav';
 import { useKioskStore } from '../../stores/kioskStore';
 import { KioskOverlay } from '../kiosk/KioskOverlay';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -57,6 +57,20 @@ export default function AppLayout() {
       enableSpatialNavigation();
     }
   }, [isTvMode]);
+
+  const profileId = currentProfile?.id;
+  const tvAutoDetectedRef = useRef(false);
+
+  useEffect(() => {
+    if (!profileId || tvAutoDetectedRef.current) return;
+    tvAutoDetectedRef.current = true;
+
+    checkIsTV().then((isTV) => {
+      if (isTV && !settings.tvMode) {
+        updateProfileSettings(profileId, { tvMode: true });
+      }
+    });
+  }, [profileId, settings.tvMode, updateProfileSettings]);
 
   // Track route changes and save to settings
   useEffect(() => {
