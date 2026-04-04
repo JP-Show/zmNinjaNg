@@ -1,9 +1,13 @@
 /**
  * VideoPlayer - Unified video player that selects WebRTC (Go2RTC) or MJPEG
  * based on user preferences and monitor capabilities.
+ *
+ * Protocol negotiation: Go2RTC tries protocols in order (WebRTC → MSE → HLS).
+ * If connected but no video frames arrive within a timeout, falls back to MJPEG.
+ * The status badge updates in real-time to show which protocol is being tried.
  */
 
-import { useRef, useMemo, useState, useEffect } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import type { Monitor, Profile } from '../../api/types';
@@ -13,6 +17,10 @@ import { useMonitorStream } from '../../hooks/useMonitorStream';
 import { log, LogLevel } from '../../lib/logger';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { VideoOff } from 'lucide-react';
+
+/** Seconds to wait for video frames after Go2RTC reports "connected" */
+const GO2RTC_VIDEO_TIMEOUT_S = 8;
 
 export interface VideoPlayerProps {
   monitor: Monitor;
@@ -69,6 +77,7 @@ export function VideoPlayer({
   }, [userStreamingPreference, monitor.Go2RTCEnabled, monitor.Id, monitor.Name, profile?.go2rtcUrl]);
 
   const [go2rtcFailed, setGo2rtcFailed] = useState(false);
+  const [hasVideoFrames, setHasVideoFrames] = useState(false);
   const effectiveStreamingMethod = go2rtcFailed ? 'mjpeg' : streamingMethod;
 
   const go2rtcStream = useGo2RTCStream({
@@ -81,10 +90,10 @@ export function VideoPlayer({
     muted,
   });
 
-  // Fall back to MJPEG when Go2RTC fails
+  // Fall back to MJPEG when Go2RTC reports error state
   useEffect(() => {
     if (streamingMethod === 'webrtc' && go2rtcStream.state === 'error' && !go2rtcFailed) {
-      log.videoPlayer('Go2RTC failed, falling back to MJPEG', LogLevel.WARN, {
+      log.videoPlayer('Go2RTC error, falling back to MJPEG', LogLevel.WARN, {
         monitorId: monitor.Id,
         error: go2rtcStream.error,
       });
@@ -92,9 +101,56 @@ export function VideoPlayer({
     }
   }, [streamingMethod, go2rtcStream.state, go2rtcStream.error, go2rtcFailed, monitor.Id]);
 
+  // Fall back to MJPEG when Go2RTC connects but no video frames arrive
+  const videoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearVideoTimeout = useCallback(() => {
+    if (videoTimeoutRef.current) {
+      clearTimeout(videoTimeoutRef.current);
+      videoTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (streamingMethod !== 'webrtc' || go2rtcFailed) {
+      clearVideoTimeout();
+      return;
+    }
+
+    if (go2rtcStream.state === 'connected' && !hasVideoFrames) {
+      // Start timeout — if no frames arrive, fall back
+      clearVideoTimeout();
+      videoTimeoutRef.current = setTimeout(() => {
+        // Check for video frames by inspecting the video element
+        const video = go2rtcStream.getVideoElement();
+        const hasFrames = video && video.videoWidth > 0 && video.videoHeight > 0 && !video.paused;
+
+        if (!hasFrames) {
+          log.videoPlayer('Go2RTC connected but no video frames, falling back to MJPEG', LogLevel.WARN, {
+            monitorId: monitor.Id,
+            protocol: go2rtcStream.activeProtocol,
+            videoWidth: video?.videoWidth,
+            videoHeight: video?.videoHeight,
+            paused: video?.paused,
+          });
+          setGo2rtcFailed(true);
+        } else {
+          setHasVideoFrames(true);
+        }
+      }, GO2RTC_VIDEO_TIMEOUT_S * 1000);
+    }
+
+    if (hasVideoFrames) {
+      clearVideoTimeout();
+    }
+
+    return clearVideoTimeout;
+  }, [streamingMethod, go2rtcFailed, go2rtcStream.state, hasVideoFrames, go2rtcStream, monitor.Id, clearVideoTimeout]);
+
   // Reset failure state when monitor changes
   useEffect(() => {
     setGo2rtcFailed(false);
+    setHasVideoFrames(false);
   }, [monitor.Id]);
 
   const mjpegStream = useMonitorStream({
@@ -106,6 +162,19 @@ export function VideoPlayer({
     },
     enabled: effectiveStreamingMethod === 'mjpeg',
   });
+
+  // Track when MJPEG image loads
+  const [mjpegLoaded, setMjpegLoaded] = useState(false);
+  useEffect(() => {
+    if (effectiveStreamingMethod === 'mjpeg') {
+      setMjpegLoaded(false);
+    }
+  }, [effectiveStreamingMethod, monitor.Id]);
+
+  const handleMjpegLoad = useCallback(() => {
+    setMjpegLoaded(true);
+    onLoad?.();
+  }, [onLoad]);
 
   // Sync media ref for snapshot capture
   useEffect(() => {
@@ -132,6 +201,7 @@ export function VideoPlayer({
 
     if (go2rtcFailed) {
       setGo2rtcFailed(false);
+      setHasVideoFrames(false);
       go2rtcStream.retry();
     } else if (isWebRTC) {
       go2rtcStream.retry();
@@ -152,22 +222,49 @@ export function VideoPlayer({
 
   // Notify parent when stream is connected (WebRTC path)
   useEffect(() => {
-    if (isWebRTC && status.state === 'connected') {
+    if (isWebRTC && status.state === 'connected' && hasVideoFrames) {
       onLoad?.();
     }
-  }, [isWebRTC, status.state, onLoad]);
+  }, [isWebRTC, status.state, hasVideoFrames, onLoad]);
 
-  // Map protocol to display label
-  const protocolLabel = {
-    webrtc: 'WebRTC',
-    mse: 'MSE',
-    hls: 'HLS',
-    go2rtc: t('video.streaming_webrtc'),
-    mjpeg: t('video.streaming_mjpeg'),
-  }[status.protocol] || status.protocol;
+  // Protocol label for status badge
+  const protocolLabel = useMemo(() => {
+    if (go2rtcFailed && effectiveStreamingMethod === 'mjpeg' && streamingMethod === 'webrtc') {
+      // Fell back from Go2RTC to MJPEG
+      return t('video.streaming_mjpeg');
+    }
+    const labels: Record<string, string> = {
+      webrtc: 'WebRTC',
+      mse: 'MSE',
+      hls: 'HLS',
+      go2rtc: t('video.streaming_webrtc'),
+      mjpeg: t('video.streaming_mjpeg'),
+    };
+    return labels[status.protocol] || status.protocol;
+  }, [status.protocol, go2rtcFailed, effectiveStreamingMethod, streamingMethod, t]);
+
+  // Status badge variant
+  const statusBadgeVariant = useMemo(() => {
+    if (go2rtcFailed) return 'outline' as const; // fell back
+    if (status.state === 'connected') return 'secondary' as const;
+    if (status.state === 'connecting') return 'outline' as const;
+    return 'destructive' as const;
+  }, [go2rtcFailed, status.state]);
+
+  // Whether we're in a "waiting for video" state
+  const isWaitingForVideo = isWebRTC && status.state === 'connected' && !hasVideoFrames;
+  const showNoVideo = (status.state === 'connecting' || isWaitingForVideo) ||
+    (!isWebRTC && !mjpegLoaded);
 
   return (
     <div className="relative w-full h-full" data-testid="video-player">
+      {/* Background placeholder — shown until video/image loads */}
+      {showNoVideo && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30" data-testid="video-player-loading">
+          <VideoOff className="h-8 w-8 text-muted-foreground/40" />
+        </div>
+      )}
+
       {isWebRTC && (
         <div
           ref={containerRef}
@@ -185,37 +282,38 @@ export function VideoPlayer({
           data-testid="video-player-mjpeg"
           src={mjpegStream.streamUrl}
           alt={monitor.Name}
-          onLoad={onLoad}
+          onLoad={handleMjpegLoad}
         />
       )}
 
+      {/* Protocol status badge */}
       {showStatus && (
-        <div className="absolute top-2 left-2 flex gap-2" data-testid="video-player-status">
-          <Badge variant="secondary" className="text-xs">
+        <div className="absolute top-2 left-2 flex gap-1.5" data-testid="video-player-status">
+          <Badge variant={statusBadgeVariant} className="text-[10px] px-1.5 py-0 h-4">
             {protocolLabel}
           </Badge>
-          {status.state === 'connecting' && (
-            <Badge variant="outline" className="text-xs">{t('video.connecting')}</Badge>
+          {isWaitingForVideo && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 animate-pulse">
+              {t('video.connecting')}
+            </Badge>
           )}
-          {status.state === 'error' && (
-            <Badge variant="destructive" className="text-xs">{t('video.connection_error')}</Badge>
+          {go2rtcFailed && streamingMethod === 'webrtc' && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+              {t('video.fallback_to_mjpeg')}
+            </Badge>
           )}
         </div>
       )}
 
+      {/* Error overlay */}
       {status.state === 'error' && status.error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white p-4" data-testid="video-player-error">
-          <p className="text-center mb-4">{t('video.connection_failed')}</p>
-          <p className="text-sm text-gray-300 mb-4">{status.error}</p>
+          <VideoOff className="h-10 w-10 text-white/60 mb-3" />
+          <p className="text-center text-sm mb-2">{t('video.connection_failed')}</p>
+          <p className="text-xs text-gray-300 mb-4">{status.error}</p>
           <Button onClick={handleRetry} variant="secondary" size="sm" data-testid="video-player-retry">
             {t('video.retry_connection')}
           </Button>
-        </div>
-      )}
-
-      {status.state === 'connecting' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30" data-testid="video-player-loading">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
         </div>
       )}
     </div>
