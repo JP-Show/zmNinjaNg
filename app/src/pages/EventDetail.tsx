@@ -198,14 +198,21 @@ export default function EventDetail() {
 
   // Detect HLS vs MP4 from DefaultVideo field
   const isHlsEvent = event.Event.DefaultVideo?.endsWith('.m3u8') === true;
-  const videoMimeType = isHlsEvent ? 'application/x-mpegURL' : 'video/mp4';
 
-  // Video.js uses XHR which enforces CORS. In dev mode, route through
-  // the dev proxy. In production Tauri, CORS isn't enforced.
-  const rawVideoUrl = currentProfile && hasVideo
-    ? getEventVideoUrl(resolvedPortalUrl, event.Event.Id, accessToken || undefined, currentProfile.apiUrl, isHlsEvent)
+  // HLS requires XHR which is blocked by CORS in Tauri/native webviews.
+  // On non-web platforms, skip HLS and use ZMS playback directly.
+  const canPlayHls = isHlsEvent && Platform.isWeb;
+  const videoMimeType = canPlayHls ? 'application/x-mpegURL' : 'video/mp4';
+
+  // For HLS on web, use the dev proxy. For MP4, use direct URL.
+  // For HLS on non-web (Tauri/native), skip video.js entirely and use ZMS
+  const forceZmsFallback = isHlsEvent && !canPlayHls;
+
+  const rawVideoUrl = currentProfile && hasVideo && !forceZmsFallback
+    ? getEventVideoUrl(resolvedPortalUrl, event.Event.Id, accessToken || undefined, currentProfile.apiUrl, canPlayHls)
     : '';
-  const videoUrl = wrapWithImageProxy(rawVideoUrl);
+  const videoUrl = canPlayHls ? wrapWithImageProxy(rawVideoUrl) : rawVideoUrl;
+
 
   const posterUrl = currentProfile
     ? getEventImageUrl(resolvedPortalUrl, event.Event.Id, 'snapshot', {
@@ -341,7 +348,7 @@ export default function EventDetail() {
         <div className="w-full max-w-5xl space-y-3 sm:space-y-4 md:space-y-6">
           {/* Video Player or ZMS Playback */}
           {hasVideo ? (
-            useZmsFallback ? (
+            useZmsFallback || forceZmsFallback ? (
               // ZMS playback with controls
               currentProfile && (
                 <ZmsEventPlayer
