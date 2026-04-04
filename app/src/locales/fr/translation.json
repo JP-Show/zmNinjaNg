@@ -470,6 +470,8 @@
     "alarm_disarm_action": "Désarmer le moniteur",
     "alarm_updating": "Mise à jour de l'état d'alarme...",
     "alarm_help": "Armez pour forcer un état d'alarme sur ce moniteur.",
+    "go2rtc_label": "Go2RTC",
+    "go2rtc_override_note": "Go2RTC désactivé pour ce moniteur",
     "alarm_failed": "Échec de la mise à jour de l'état d'alarme",
     "alarm_armed_toast": "Moniteur armé",
     "alarm_disarmed_toast": "Moniteur désarmé",

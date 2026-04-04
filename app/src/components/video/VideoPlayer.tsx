@@ -69,7 +69,10 @@ export function VideoPlayer({
   const rawSettings = useSettingsStore(
     useShallow((state) => state.profileSettings[profile?.id || ''])
   );
-  const userStreamingPreference = rawSettings?.streamingMethod ?? 'auto';
+  const globalStreamingMethod = rawSettings?.streamingMethod ?? 'auto';
+  // Per-monitor override takes precedence over global setting
+  const monitorOverride = rawSettings?.monitorStreamingOverrides?.[monitor.Id];
+  const userStreamingPreference = monitorOverride ?? globalStreamingMethod;
 
   // Determine streaming method: WebRTC if supported and enabled, otherwise MJPEG
   const lastLoggedRef = useRef<string>('');

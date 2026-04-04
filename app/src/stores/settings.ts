@@ -98,6 +98,9 @@ export interface ProfileSettings {
   sidebarWidth: number;
   // TV mode — enables D-pad navigation and larger UI
   tvMode: boolean;
+  // Per-monitor streaming method overrides (monitorId → 'auto' | 'mjpeg')
+  // When absent, the monitor uses the profile-level streamingMethod.
+  monitorStreamingOverrides: Record<string, StreamingMethod>;
 }
 
 interface SettingsState {
@@ -201,6 +204,7 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   montageActiveLayoutName: null,
   sidebarWidth: 256,
   tvMode: false,
+  monitorStreamingOverrides: {},
 };
 
 export const useSettingsStore = create<SettingsState>()(
