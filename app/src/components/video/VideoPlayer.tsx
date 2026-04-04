@@ -321,7 +321,7 @@ export function VideoPlayer({
 
       {/* Protocol status badge */}
       {showStatus && (
-        <div className="absolute bottom-1.5 right-1.5 flex gap-1.5" data-testid="video-player-status">
+        <div className="absolute bottom-1.5 right-1.5 z-20 flex gap-1.5" data-testid="video-player-status">
           {isWaitingForVideo && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 animate-pulse bg-black/40 text-white border-white/20">
               {t('video.connecting')}

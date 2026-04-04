@@ -246,7 +246,7 @@ function MontageMonitorComponent({
           profile={currentProfile}
           externalMediaRef={mediaRef}
           objectFit={resolvedFit}
-          showStatus={showOverlay}
+          showStatus={settings.montageShowToolbar}
           muted={true}
           className="w-full h-full"
           onLoad={() => setImageLoaded(true)}
