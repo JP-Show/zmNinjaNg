@@ -279,7 +279,7 @@ export function VideoPlayer({
   // Whether we're in a "waiting for video" state
   const isWaitingForVideo = isWebRTC && status.state === 'connected' && !hasVideoFrames;
   const showNoVideo = (status.state === 'connecting' || isWaitingForVideo) ||
-    (!isWebRTC && !mjpegLoaded);
+    (!isWebRTC && !mjpegStream.streamUrl);
 
   return (
     <div className="relative w-full h-full" data-testid="video-player">
