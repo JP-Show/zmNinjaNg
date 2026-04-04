@@ -188,18 +188,25 @@ export function VideoPlayer({
     enabled: effectiveStreamingMethod === 'mjpeg',
   });
 
-  // Track when MJPEG image loads
+  // Track when MJPEG image loads or fails
   const [mjpegLoaded, setMjpegLoaded] = useState(false);
+  const [mjpegError, setMjpegError] = useState(false);
   useEffect(() => {
     if (effectiveStreamingMethod === 'mjpeg') {
       setMjpegLoaded(false);
+      setMjpegError(false);
     }
   }, [effectiveStreamingMethod, monitor.Id]);
 
   const handleMjpegLoad = useCallback(() => {
     setMjpegLoaded(true);
+    setMjpegError(false);
     onLoad?.();
   }, [onLoad]);
+
+  const handleMjpegError = useCallback(() => {
+    setMjpegError(true);
+  }, []);
 
   // Sync media ref for snapshot capture
   useEffect(() => {
@@ -279,7 +286,7 @@ export function VideoPlayer({
   // Whether we're in a "waiting for video" state
   const isWaitingForVideo = isWebRTC && status.state === 'connected' && !hasVideoFrames;
   const showNoVideo = (status.state === 'connecting' || isWaitingForVideo) ||
-    (!isWebRTC && !mjpegStream.streamUrl);
+    (!isWebRTC && (!mjpegStream.streamUrl || mjpegError));
 
   return (
     <div className="relative w-full h-full" data-testid="video-player">
@@ -303,11 +310,12 @@ export function VideoPlayer({
         <img
           ref={imgRef}
           className={`w-full h-full ${className}`}
-          style={{ objectFit }}
+          style={{ objectFit, ...(mjpegError ? { display: 'none' } : {}) }}
           data-testid="video-player-mjpeg"
           src={mjpegStream.streamUrl}
           alt={monitor.Name}
           onLoad={handleMjpegLoad}
+          onError={handleMjpegError}
         />
       )}
 
