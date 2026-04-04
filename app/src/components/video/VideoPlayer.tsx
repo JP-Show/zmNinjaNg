@@ -22,6 +22,26 @@ import { VideoOff } from 'lucide-react';
 /** Seconds to wait for video frames after Go2RTC reports "connected" */
 const GO2RTC_VIDEO_TIMEOUT_S = 8;
 
+/** Minutes before retrying Go2RTC on a monitor that previously failed */
+const GO2RTC_RETRY_INTERVAL_MIN = 5;
+
+/** Cache of monitors where Go2RTC failed — skip straight to MJPEG until TTL expires */
+const go2rtcFailureCache = new Map<string, number>();
+
+function isGo2rtcCachedFailure(monitorId: string): boolean {
+  const failedAt = go2rtcFailureCache.get(monitorId);
+  if (!failedAt) return false;
+  if (Date.now() - failedAt > GO2RTC_RETRY_INTERVAL_MIN * 60 * 1000) {
+    go2rtcFailureCache.delete(monitorId);
+    return false;
+  }
+  return true;
+}
+
+function markGo2rtcFailed(monitorId: string): void {
+  go2rtcFailureCache.set(monitorId, Date.now());
+}
+
 export interface VideoPlayerProps {
   monitor: Monitor;
   profile: Profile | null;
@@ -76,7 +96,7 @@ export function VideoPlayer({
     return method;
   }, [userStreamingPreference, monitor.Go2RTCEnabled, monitor.Id, monitor.Name, profile?.go2rtcUrl]);
 
-  const [go2rtcFailed, setGo2rtcFailed] = useState(false);
+  const [go2rtcFailed, setGo2rtcFailed] = useState(() => isGo2rtcCachedFailure(monitor.Id));
   const [hasVideoFrames, setHasVideoFrames] = useState(false);
   const effectiveStreamingMethod = go2rtcFailed ? 'mjpeg' : streamingMethod;
 
@@ -97,6 +117,7 @@ export function VideoPlayer({
         monitorId: monitor.Id,
         error: go2rtcStream.error,
       });
+      markGo2rtcFailed(monitor.Id);
       setGo2rtcFailed(true);
     }
   }, [streamingMethod, go2rtcStream.state, go2rtcStream.error, go2rtcFailed, monitor.Id]);
@@ -133,6 +154,7 @@ export function VideoPlayer({
             videoHeight: video?.videoHeight,
             paused: video?.paused,
           });
+          markGo2rtcFailed(monitor.Id);
           setGo2rtcFailed(true);
         } else {
           setHasVideoFrames(true);
@@ -147,9 +169,9 @@ export function VideoPlayer({
     return clearVideoTimeout;
   }, [streamingMethod, go2rtcFailed, go2rtcStream.state, hasVideoFrames, go2rtcStream, monitor.Id, clearVideoTimeout]);
 
-  // Reset failure state when monitor changes
+  // Reset failure state when monitor changes (check cache for new monitor)
   useEffect(() => {
-    setGo2rtcFailed(false);
+    setGo2rtcFailed(isGo2rtcCachedFailure(monitor.Id));
     setHasVideoFrames(false);
   }, [monitor.Id]);
 
