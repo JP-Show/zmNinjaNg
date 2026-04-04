@@ -322,11 +322,6 @@ export function VideoPlayer({
               {t('video.connecting')}
             </Badge>
           )}
-          {go2rtcFailed && streamingMethod === 'webrtc' && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-              {t('video.fallback_to_mjpeg')}
-            </Badge>
-          )}
         </div>
       )}
 
