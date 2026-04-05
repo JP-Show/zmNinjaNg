@@ -69,7 +69,7 @@ function AppRoutes() {
   const profiles = useProfileStore((state) => state.profiles);
   const isInitialized = useProfileStore((state) => state.isInitialized);
   const { currentProfile, settings } = useCurrentProfile();
-  const { logLevel, lastRoute } = settings;
+  const { logLevel, lastRoute, componentLogLevels } = settings;
 
   // Enable automatic token refresh
   useTokenRefresh();
@@ -85,6 +85,10 @@ function AppRoutes() {
   useEffect(() => {
     logger.setLevel(logLevel);
   }, [logLevel]);
+
+  useEffect(() => {
+    logger.setComponentLevels(componentLogLevels || {});
+  }, [componentLogLevels]);
 
   // Log app mount and profile state
   useEffect(() => {

@@ -26,6 +26,7 @@ interface LogContext {
 class Logger {
   private level: LogLevel;
   private isDev: boolean;
+  private componentLevels: Record<string, LogLevel> = {};
 
   constructor() {
     this.isDev = this.resolveIsDev();
@@ -55,6 +56,35 @@ class Logger {
    */
   getLevel(): LogLevel {
     return this.level;
+  }
+
+  /**
+   * Set the log level for a single component, overriding the global level.
+   */
+  setComponentLevel(component: string, level: LogLevel): void {
+    this.componentLevels[component] = level;
+  }
+
+  /**
+   * Replace all per-component log level overrides.
+   * Accepts Record<string, number> for compatibility with persisted settings.
+   */
+  setComponentLevels(levels: Record<string, number>): void {
+    this.componentLevels = { ...levels } as Record<string, LogLevel>;
+  }
+
+  /**
+   * Get a copy of the current per-component log level overrides.
+   */
+  getComponentLevels(): Record<string, LogLevel> {
+    return { ...this.componentLevels };
+  }
+
+  /**
+   * Remove all per-component log level overrides.
+   */
+  clearComponentLevels(): void {
+    this.componentLevels = {};
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -134,32 +164,28 @@ class Logger {
     return true;
   }
 
-  // Helper method to create component loggers
+  // Helper method to create component loggers.
+  // Uses per-component level override when set, falling back to the global level.
+  // Calls formatMessage directly to bypass the global shouldLog check so that
+  // a component override (e.g. DEBUG) works even when the global level is higher.
   private createComponentLogger(componentName: string, message: string, level: LogLevel, details?: unknown): void {
     if (level < LogLevel.DEBUG || level > LogLevel.ERROR) return;
 
+    // Per-component level overrides global level
+    const effectiveLevel = this.componentLevels[componentName] ?? this.level;
+    if (level < effectiveLevel) return;
+
     const context = { component: componentName };
     const hasDetailsArg = this.hasDetails(details);
+    const levelNames: Record<number, string> = { 0: 'DEBUG', 1: 'INFO', 2: 'WARN', 3: 'ERROR' };
+    const levelName = levelNames[level] || 'DEBUG';
 
-    // Map log levels to their corresponding methods
-    const levelMethods: Record<LogLevel, ((msg: string, ctx: LogContext, ...args: unknown[]) => void) | null> = {
-      [LogLevel.DEBUG]: this.debug.bind(this),
-      [LogLevel.INFO]: this.info.bind(this),
-      [LogLevel.WARN]: this.warn.bind(this),
-      [LogLevel.ERROR]: this.error.bind(this),
-      [LogLevel.NONE]: null, // NONE level doesn't have a method
-    };
-
-    const logMethod = levelMethods[level];
-    if (!logMethod) return;
-
-    // Special handling for ERROR level with object details
     if (level === LogLevel.ERROR && hasDetailsArg && typeof details === 'object') {
-      logMethod(message, context, JSON.stringify(details, null, 2));
+      this.formatMessage(levelName, context, message, JSON.stringify(details, null, 2));
     } else if (hasDetailsArg) {
-      logMethod(message, context, details);
+      this.formatMessage(levelName, context, message, details);
     } else {
-      logMethod(message, context);
+      this.formatMessage(levelName, context, message);
     }
   }
 

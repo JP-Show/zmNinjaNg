@@ -103,6 +103,9 @@ export interface ProfileSettings {
   // Per-monitor streaming method overrides (monitorId → 'auto' | 'mjpeg')
   // When absent, the monitor uses the profile-level streamingMethod.
   monitorStreamingOverrides: Record<string, StreamingMethod>;
+  // Per-component log level overrides (component name → LogLevel)
+  // When absent, the component uses the global logLevel.
+  componentLogLevels: Record<string, number>;
 }
 
 interface SettingsState {
@@ -208,6 +211,7 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   tvMode: false,
   showProtocolLabel: true,
   monitorStreamingOverrides: {},
+  componentLogLevels: {},
 };
 
 export const useSettingsStore = create<SettingsState>()(
