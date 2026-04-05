@@ -29,7 +29,24 @@ Tap an event to open the event detail view, which includes:
 
 ### Video Player
 
-The event player shows the recorded footage using JPEG frame playback. Controls include:
+The event player selects the playback mode based on the event's format:
+
+- **HLS events** - Events with an `.m3u8` DefaultVideo use HLS playback via video.js
+- **MP4 events** - Events with MP4 recordings use standard video playback
+
+If video.js playback fails (network error, unsupported codec, etc.), the player automatically falls back to ZMS playback, which streams JPEG frames from ZoneMinder.
+
+#### ZMS Fallback
+
+ZMS playback renders frames one at a time from ZoneMinder's streaming server. Controls include:
+
+- **Play/Pause** - Start or stop frame-by-frame playback
+- **Seek** - Jump to any point in the event
+- **Playback speed** - Adjust speed
+
+#### Standard Controls
+
+For video-based playback (HLS or MP4), the player provides:
 
 - **Play/Pause** - Start or stop playback
 - **Scrub bar** - Jump to any point in the event

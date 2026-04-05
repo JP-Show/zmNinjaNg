@@ -40,6 +40,17 @@ Settings that control live camera feeds in the Monitor Detail view:
 |---------|-------------|
 | **Streaming protocol** | WebRTC (lowest latency), MSE, or HLS — tried in order if go2rtc is configured |
 | **Snapshot interval** | How often to refresh snapshot images |
+| **Protocol Label** | Shows or hides the streaming protocol indicator (MJPEG/MSE/WebRTC) on video feeds across all pages |
+
+### Streaming Protocols
+
+When Go2RTC is enabled, zmNinjaNG tries WebRTC, MSE, and HLS in parallel. The first protocol to produce video wins and is used for the stream. If all Go2RTC protocols fail, the app falls back to MJPEG via ZoneMinder's ZMS. The protocol label (when enabled) shows which protocol is active on each feed.
+
+You can configure which protocols to try in the Go2RTC protocol settings.
+
+### Per-Monitor Streaming Override
+
+The global Go2RTC setting acts as the default for all monitors. To override it for a single monitor, open the monitor's Settings dialog (Video tab). When a monitor has Go2RTC enabled, a Go2RTC toggle appears. Turning it off forces MJPEG for that monitor only, leaving other monitors unaffected.
 
 ## Playback
 
@@ -75,9 +86,23 @@ Manage the PIN used to lock and unlock kiosk mode. See {doc}`kiosk` for full det
 | **Change PIN** | Requires verifying your current PIN or biometrics before setting a new one. |
 | **Clear PIN** | Removes the PIN. Requires verifying the current PIN or biometrics first. |
 
+## Multi-Server
+
+zmNinjaNG automatically detects multi-server ZoneMinder setups via the `/servers.json` API endpoint. Single-server setups are unaffected — no behavior change occurs.
+
+In a multi-server setup:
+
+- Each monitor's ServerId is mapped to the correct server for streaming, daemon checks, and event images
+- All API calls, ZMS streams, and portal URLs route to the appropriate server
+- Multi-port streaming (`ZM_MIN_STREAMING_PORT`) is automatically applied to per-monitor URLs
+
+### Server Page
+
+The Server page (accessible from the sidebar) shows all servers in the cluster with per-server status including CPU, memory, and disk usage. Storage areas are displayed with disk usage and their server association.
+
 ## Server Information
 
-The Server screen (accessible from the sidebar) shows information about the connected ZoneMinder server:
+For single-server setups, the Server screen shows:
 
 - Server version
 - API version

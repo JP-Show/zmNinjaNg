@@ -33,11 +33,21 @@ The detail view for a single monitor provides:
 A live stream from the camera. zmNinjaNG supports multiple streaming modes:
 
 - **Snapshot mode** - Periodically refreshed JPEG images (lower bandwidth)
-- **MJPEG streaming** - Motion JPEG stream via ZoneMinder's zms
-- **go2rtc streaming** - Real-time streaming via go2rtc if configured on your server, with multiple protocol options:
+- **MJPEG streaming** - Motion JPEG stream via ZoneMinder's ZMS
+- **Go2RTC streaming** - Real-time streaming via Go2RTC if configured on your server, with automatic protocol negotiation:
   - WebRTC (lowest latency)
   - MSE (Media Source Extensions)
   - HLS (HTTP Live Streaming)
+
+When Go2RTC is enabled, the app tries WebRTC, MSE, and HLS in parallel and uses whichever produces video first. If Go2RTC connects but no video frames appear within 8 seconds, the app automatically falls back to MJPEG. Monitors that fail Go2RTC are cached for 5 minutes before the app retries Go2RTC on them.
+
+The protocol label (enabled in {doc}`settings`) shows which streaming protocol is active on each feed.
+
+The monitor detail page shows native video controls (play, pause, volume) for Go2RTC streams.
+
+#### Per-Monitor Override
+
+You can force MJPEG for individual monitors via the monitor's Settings dialog (Video tab). When Go2RTC is enabled for a monitor, a toggle appears to turn it off for that monitor only. See {doc}`settings` for details.
 
 ### PTZ Controls
 

@@ -39,6 +39,12 @@ See {doc}`kiosk` to use the lock button in the fullscreen toolbar.
 
 On touch devices, pinch to zoom in or out on the grid. Zoom is disabled in fullscreen mode to avoid gesture conflicts.
 
+## Streaming
+
+Go2RTC streams in the montage are muted by default. The protocol label (MJPEG/MSE/WebRTC) visibility is controlled by the toolbar eye toggle.
+
+Monitors that cannot be reached display a VideoOff placeholder instead of a broken feed.
+
 ## Performance
 
 The montage view loads snapshot images rather than full video streams to keep bandwidth usage manageable when viewing many cameras at once. The refresh interval follows your {doc}`bandwidth settings <settings>`.
