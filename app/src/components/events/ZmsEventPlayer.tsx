@@ -262,7 +262,11 @@ export function ZmsEventPlayer({
         className="overflow-hidden shadow-2xl border-0 ring-1 ring-border/20 bg-black touch-none relative"
       >
         <div className="aspect-video relative bg-black">
-          <div ref={zoomPan.innerRef}>
+          {/* No-video placeholder — behind the stream, only visible when image fails */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <VideoOff className="h-10 w-10 text-muted-foreground/30" />
+          </div>
+          <div ref={zoomPan.innerRef} className="relative z-10">
             <img
               src={zmsUrl}
               alt={t('event_detail.event_playback')}
@@ -270,11 +274,6 @@ export function ZmsEventPlayer({
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               onLoad={(e) => { (e.target as HTMLImageElement).style.display = ''; }}
             />
-          </div>
-
-          {/* No-video placeholder behind the stream image */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <VideoOff className="h-10 w-10 text-muted-foreground/30" />
           </div>
 
           {/* Status Badge */}
