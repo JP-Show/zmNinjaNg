@@ -374,6 +374,7 @@ export default function MonitorDetail() {
               externalMediaRef={mediaRef}
               objectFit={isFullscreen ? 'contain' : settings.monitorDetailFeedFit}
               showStatus={true}
+              showControls={true}
               className="data-[testid=monitor-player]"
             />
             <ZoneOverlay

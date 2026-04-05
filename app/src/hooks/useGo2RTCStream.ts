@@ -29,6 +29,8 @@ export interface UseGo2RTCStreamOptions {
   token?: string;
   enabled?: boolean;
   muted?: boolean;
+  /** Show native video controls (play/pause, volume, fullscreen) */
+  controls?: boolean;
 }
 
 export interface UseGo2RTCStreamResult {
@@ -52,6 +54,7 @@ export function useGo2RTCStream(options: UseGo2RTCStreamOptions): UseGo2RTCStrea
     token,
     enabled = true,
     muted = false,
+    controls = false,
   } = options;
 
   const [state, setState] = useState<ConnectionState>('idle');
@@ -132,12 +135,14 @@ export function useGo2RTCStream(options: UseGo2RTCStreamOptions): UseGo2RTCStrea
       videoRtc.oninit = () => {
         originalOninit();
         if (videoRtc.video) {
-          videoRtc.video.controls = true;
+          videoRtc.video.controls = controls;
           videoRtc.video.disablePictureInPicture = true;
-          videoRtc.video.controlsList = 'nodownload noplaybackrate';
           videoRtc.video.playsInline = true;
-          // Prevent clicks on video controls from navigating to monitor detail
-          videoRtc.video.addEventListener('click', (e: Event) => e.stopPropagation());
+          if (controls) {
+            videoRtc.video.controlsList = 'nodownload noplaybackrate';
+            // Prevent clicks on video controls from navigating to monitor detail
+            videoRtc.video.addEventListener('click', (e: Event) => e.stopPropagation());
+          }
         }
         applyMuted(videoRtc.video);
       };

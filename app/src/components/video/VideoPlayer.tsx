@@ -48,6 +48,8 @@ export interface VideoPlayerProps {
   className?: string;
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
   showStatus?: boolean;
+  /** Show native video controls on Go2RTC streams (mute, fullscreen) */
+  showControls?: boolean;
   externalMediaRef?: React.RefObject<HTMLImageElement | HTMLVideoElement | null>;
   muted?: boolean;
   onLoad?: () => void;
@@ -59,6 +61,7 @@ export function VideoPlayer({
   className = '',
   objectFit = 'contain',
   showStatus = false,
+  showControls = false,
   externalMediaRef,
   muted = true,
   onLoad,
@@ -124,6 +127,7 @@ export function VideoPlayer({
     protocols: rawSettings?.webrtcProtocols,
     enabled: streamingMethod === 'webrtc' && !!profile?.go2rtcUrl && !go2rtcFailed,
     muted,
+    controls: showControls,
   });
 
   // Fall back to MJPEG when Go2RTC reports error state
