@@ -336,32 +336,27 @@ export function VideoPlayer({
             ref={containerRef}
             className={`w-full h-full ${className}`}
             style={{ objectFit } as React.CSSProperties}
-            onClick={(e) => e.stopPropagation()}
             data-testid="video-player-webrtc-container"
           />
-          {/* Minimal controls overlay — visible on hover */}
-          <div
-            className="absolute bottom-0 left-0 right-0 flex items-center gap-1 p-1 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity z-20"
-            onClick={(e) => e.stopPropagation()}
-          >
+          {/* Persistent minimal controls */}
+          <div className="absolute bottom-1 left-1 z-20 flex gap-0.5">
             <button
               type="button"
               onClick={handleMuteToggle}
-              className="p-1 rounded hover:bg-white/20 text-white/80 hover:text-white"
+              className="p-1 rounded-full bg-black/50 text-white/80 hover:bg-black/70 hover:text-white"
               title={isMutedState ? 'Unmute' : 'Mute'}
               data-testid="video-mute-toggle"
             >
-              {isMutedState ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              {isMutedState ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
             </button>
-            <div className="flex-1" />
             <button
               type="button"
               onClick={handleFullscreen}
-              className="p-1 rounded hover:bg-white/20 text-white/80 hover:text-white"
+              className="p-1 rounded-full bg-black/50 text-white/80 hover:bg-black/70 hover:text-white"
               title="Fullscreen"
               data-testid="video-fullscreen"
             >
-              <Maximize className="h-4 w-4" />
+              <Maximize className="h-3.5 w-3.5" />
             </button>
           </div>
         </>
