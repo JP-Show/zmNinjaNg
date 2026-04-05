@@ -326,11 +326,12 @@ export async function controlMonitor(
   monitorId: string,
   command: string,
   token?: string,
-  minStreamingPort?: number,
 ): Promise<void> {
   log.api('Sending PTZ control command', LogLevel.INFO, { monitorId, command });
 
-  const url = buildMonitorControlUrl(portalUrl, monitorId, command, { token, minStreamingPort });
+  // Don't apply multi-port — PTZ commands go through index.php which routes
+  // internally. Tauri's HTTP scope blocks non-standard ports.
+  const url = buildMonitorControlUrl(portalUrl, monitorId, command, { token });
 
   // In dev mode on web, use proxy server to avoid CORS issues
   const proxiedUrl = wrapWithImageProxy(url);
