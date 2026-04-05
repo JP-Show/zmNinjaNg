@@ -48,7 +48,7 @@ function MontageMonitorComponent({
   monitor,
   status,
   currentProfile,
-  accessToken,
+  accessToken: _accessToken,
   navigate,
   isFullscreen = false,
   isEditing = false,
