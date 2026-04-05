@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  VideoOff,
 } from 'lucide-react';
 import { getEventImageUrl } from '../../api/events';
 import { useTranslation } from 'react-i18next';
@@ -53,6 +54,8 @@ interface ZmsEventPlayerProps {
   alarmFrameId?: string;
   maxScoreFrameId?: string;
   eventLength: number; // Event duration in seconds
+  minStreamingPort?: number;
+  monitorId?: string;
   className?: string;
 }
 
@@ -66,6 +69,8 @@ export function ZmsEventPlayer({
   alarmFrameId,
   maxScoreFrameId,
   eventLength,
+  minStreamingPort,
+  monitorId,
   className,
 }: ZmsEventPlayerProps) {
   const { t } = useTranslation();
@@ -115,12 +120,14 @@ export function ZmsEventPlayer({
       maxfps: 30,
       replay: 'single',
       connkey: connKey,
+      minStreamingPort,
+      monitorId,
     });
-  }, [portalUrl, apiUrl, eventId, playbackSpeed, connKey, token]);
+  }, [portalUrl, apiUrl, eventId, playbackSpeed, connKey, token, minStreamingPort, monitorId]);
 
   // Send control command to the stream
   const sendCommand = useCallback(async (cmd: number, offset?: number) => {
-    const url = getZmsControlUrl(portalUrl, cmd, connKey, { token, apiUrl, offset });
+    const url = getZmsControlUrl(portalUrl, cmd, connKey, { token, apiUrl, offset, minStreamingPort, monitorId });
 
     try {
       await httpGet(url);
@@ -131,13 +138,13 @@ export function ZmsEventPlayer({
         error: err,
       });
     }
-  }, [portalUrl, apiUrl, connKey, token]);
+  }, [portalUrl, apiUrl, connKey, token, minStreamingPort, monitorId]);
 
   // Poll stream status to track playback position
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const queryStatus = useCallback(async () => {
-    const url = getZmsControlUrl(portalUrl, ZM_CMD.QUERY, connKey, { token, apiUrl });
+    const url = getZmsControlUrl(portalUrl, ZM_CMD.QUERY, connKey, { token, apiUrl, minStreamingPort, monitorId });
     try {
       const resp = await httpGet<{ status?: { progress?: number; duration?: number } }>(url);
       const status = resp.data?.status;
@@ -156,7 +163,7 @@ export function ZmsEventPlayer({
     } catch {
       // Status query failed — ignore and retry next tick
     }
-  }, [portalUrl, connKey, token, apiUrl, totalFrames]);
+  }, [portalUrl, connKey, token, apiUrl, totalFrames, minStreamingPort, monitorId]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -260,7 +267,14 @@ export function ZmsEventPlayer({
               src={zmsUrl}
               alt={t('event_detail.event_playback')}
               className="w-full h-full object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              onLoad={(e) => { (e.target as HTMLImageElement).style.display = ''; }}
             />
+          </div>
+
+          {/* No-video placeholder behind the stream image */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <VideoOff className="h-10 w-10 text-muted-foreground/30" />
           </div>
 
           {/* Status Badge */}
@@ -428,6 +442,8 @@ export function ZmsEventPlayer({
                   token,
                   width: 120,
                   apiUrl,
+                  minStreamingPort,
+                  monitorId,
                 })}
                 alt={t('event_detail.first_alarm_frame')}
                 className="w-30 h-20 object-cover rounded border-2 border-destructive"
@@ -448,6 +464,8 @@ export function ZmsEventPlayer({
                     token,
                     width: 120,
                     apiUrl,
+                    minStreamingPort,
+                    monitorId,
                   })}
                   alt={t('event_detail.max_score_frame')}
                   className="w-30 h-20 object-cover rounded border-2 border-yellow-500"

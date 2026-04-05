@@ -20,6 +20,7 @@ import { Button } from '../ui/button';
 import { SecureImage } from '../ui/secure-image';
 import { downloadEventVideo } from '../../lib/download';
 import { getEventImageUrl, type EventFilters } from '../../api/events';
+import { getPortalUrlForEvent } from '../../lib/server-resolver';
 import { calculateThumbnailDimensions, getMonitorDimensions } from '../../lib/event-utils';
 import { ZM_INTEGRATION } from '../../lib/zmninja-ng-constants';
 import type { EventData, Monitor, Tag } from '../../api/types';
@@ -40,6 +41,7 @@ interface EventMontageViewProps {
   onLoadMore: () => void;
   eventTagMap?: Map<string, Tag[]>;
   eventFilters?: EventFilters;
+  minStreamingPort?: number;
 }
 
 export const EventMontageView = ({
@@ -56,6 +58,7 @@ export const EventMontageView = ({
   onLoadMore,
   eventTagMap,
   eventFilters,
+  minStreamingPort,
 }: EventMontageViewProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -103,10 +106,13 @@ export const EventMontageView = ({
             ZM_INTEGRATION.eventMontageImageWidth
           );
 
-          const imageUrl = getEventImageUrl(portalUrl, event.Id, 'snapshot', {
+          const eventPortalUrl = getPortalUrlForEvent(event.MonitorId, monitors, portalUrl);
+          const imageUrl = getEventImageUrl(eventPortalUrl, event.Id, 'snapshot', {
             token: accessToken,
             width: thumbnailWidth,
             height: thumbnailHeight,
+            minStreamingPort,
+            monitorId: event.MonitorId,
           });
 
           const hasVideo = event.Videoed === '1';
@@ -143,7 +149,7 @@ export const EventMontageView = ({
                       onClick={async (e) => {
                         e.stopPropagation();
                         await triggerHaptic();
-                        downloadEventVideo(portalUrl, event.Id, event.Name, accessToken);
+                        downloadEventVideo(eventPortalUrl, event.Id, event.Name, accessToken, minStreamingPort, event.MonitorId);
                         // Background task drawer will show download progress
                       }}
                       title={t('eventMontage.download_video')}

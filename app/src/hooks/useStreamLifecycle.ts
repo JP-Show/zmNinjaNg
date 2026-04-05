@@ -93,6 +93,9 @@ export function useStreamLifecycle({
       viewMode === 'streaming' &&
       portalUrl
     ) {
+      // CMD_QUIT goes via httpGet (Tauri HTTP client) — don't apply multi-port
+      // as Tauri's scope may block non-standard ports. Standard port works fine
+      // since index.php routes the command internally.
       const controlUrl = getZmsControlUrl(
         portalUrl,
         ZMS_COMMANDS.cmdQuit,

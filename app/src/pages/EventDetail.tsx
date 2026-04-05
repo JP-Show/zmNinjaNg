@@ -35,6 +35,7 @@ import { useEventFavoritesStore } from '../stores/eventFavorites';
 import { useZoomPan } from '../hooks/useZoomPan';
 import { ZoomControls } from '../components/ui/ZoomControls';
 import { useEventNavigation } from '../hooks/useEventNavigation';
+import { useServerUrls } from '../hooks/useServerUrls';
 import { cn } from '../lib/utils';
 
 export default function EventDetail() {
@@ -69,6 +70,11 @@ export default function EventDetail() {
 
   const { currentProfile, settings } = useCurrentProfile();
   const accessToken = useAuthStore((state) => state.accessToken);
+
+  // Resolve portal URL for the monitor's server (multi-server support)
+  const { portalPath } = useServerUrls(monitorData?.Monitor?.ServerId);
+  const resolvedPortalUrl = portalPath ? portalPath.replace(/\/index\.php$/, '') : currentProfile?.portalUrl || '';
+
   const { isFavorited, toggleFavorite } = useEventFavoritesStore();
   const {
     goToPrevEvent,
@@ -188,14 +194,21 @@ export default function EventDetail() {
     hasJPEGs
   });
 
+  // Detect HLS vs MP4 from DefaultVideo field
+  const isHlsEvent = event.Event.DefaultVideo?.endsWith('.m3u8') === true;
+  const videoMimeType = isHlsEvent ? 'application/x-mpegURL' : 'video/mp4';
+
   const videoUrl = currentProfile && hasVideo
-    ? getEventVideoUrl(currentProfile.portalUrl, event.Event.Id, accessToken || undefined, currentProfile.apiUrl)
+    ? getEventVideoUrl(resolvedPortalUrl, event.Event.Id, accessToken || undefined, currentProfile.apiUrl, isHlsEvent, currentProfile.minStreamingPort, event.Event.MonitorId)
     : '';
 
+
   const posterUrl = currentProfile
-    ? getEventImageUrl(currentProfile.portalUrl, event.Event.Id, 'snapshot', {
+    ? getEventImageUrl(resolvedPortalUrl, event.Event.Id, 'snapshot', {
       token: accessToken || undefined,
       apiUrl: currentProfile.apiUrl,
+      minStreamingPort: currentProfile.minStreamingPort,
+      monitorId: event.Event.MonitorId,
     })
     : undefined;
 
@@ -296,10 +309,12 @@ export default function EventDetail() {
               onClick={() => {
                 if (hasVideo && currentProfile) {
                   downloadEventVideo(
-                    currentProfile.portalUrl,
+                    resolvedPortalUrl,
                     event.Event.Id,
                     event.Event.Name,
-                    accessToken || undefined
+                    accessToken || undefined,
+                    currentProfile?.minStreamingPort,
+                    event.Event.MonitorId,
                   );
                   // Background task drawer will show download progress
                 }
@@ -330,7 +345,7 @@ export default function EventDetail() {
               // ZMS playback with controls
               currentProfile && (
                 <ZmsEventPlayer
-                  portalUrl={currentProfile.portalUrl}
+                  portalUrl={resolvedPortalUrl}
                   eventId={event.Event.Id}
                   token={accessToken || undefined}
                   apiUrl={currentProfile.apiUrl}
@@ -339,6 +354,8 @@ export default function EventDetail() {
                   alarmFrameId={event.Event.AlarmFrameId}
                   maxScoreFrameId={event.Event.MaxScoreFrameId}
                   eventLength={parseFloat(event.Event.Length)}
+                  minStreamingPort={currentProfile.minStreamingPort}
+                  monitorId={event.Event.MonitorId}
                   className="space-y-4"
                 />
               )
@@ -352,7 +369,7 @@ export default function EventDetail() {
                   <div ref={zoomPan.innerRef}>
                     <VideoPlayer
                       src={videoUrl}
-                      type="video/mp4"
+                      type={videoMimeType}
                       className="w-full h-full"
                       poster={posterUrl}
                       autoplay={settings.eventVideoAutoplay}
@@ -394,6 +411,8 @@ export default function EventDetail() {
                 alarmFrameId={event.Event.AlarmFrameId}
                 maxScoreFrameId={event.Event.MaxScoreFrameId}
                 eventLength={parseFloat(event.Event.Length)}
+                minStreamingPort={currentProfile.minStreamingPort}
+                monitorId={event.Event.MonitorId}
                 className="space-y-4"
               />
             )

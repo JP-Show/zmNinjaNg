@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { EventCard } from './EventCard';
 import { getEventImageUrl, type EventFilters } from '../../api/events';
+import { getPortalUrlForEvent } from '../../lib/server-resolver';
 import { calculateThumbnailDimensions, EVENT_GRID_CONSTANTS, getMonitorDimensions } from '../../lib/event-utils';
 import type { EventData, Monitor, Tag } from '../../api/types';
 
@@ -25,6 +26,7 @@ interface EventListViewProps {
   onLoadMore: () => void;
   eventTagMap?: Map<string, Tag[]>;
   eventFilters?: EventFilters;
+  minStreamingPort?: number;
 }
 
 // Helper to render a single event item
@@ -36,6 +38,7 @@ const EventItem = ({
   accessToken,
   eventTagMap,
   eventFilters,
+  minStreamingPort,
 }: {
   event: EventData;
   monitors: Array<{ Monitor: Monitor }>;
@@ -44,6 +47,7 @@ const EventItem = ({
   accessToken?: string;
   eventTagMap?: Map<string, Tag[]>;
   eventFilters?: EventFilters;
+  minStreamingPort?: number;
 }) => {
   const { Event } = event;
   const monitorData = monitors.find((m) => m.Monitor.Id === Event.MonitorId)?.Monitor;
@@ -57,10 +61,13 @@ const EventItem = ({
     EVENT_GRID_CONSTANTS.LIST_VIEW_TARGET_SIZE
   );
 
-  const thumbnailUrl = getEventImageUrl(portalUrl, Event.Id, 'snapshot', {
+  const eventPortalUrl = getPortalUrlForEvent(Event.MonitorId, monitors, portalUrl);
+  const thumbnailUrl = getEventImageUrl(eventPortalUrl, Event.Id, 'snapshot', {
     token: accessToken,
     width: thumbnailWidth,
     height: thumbnailHeight,
+    minStreamingPort,
+    monitorId: Event.MonitorId,
   });
 
   const monitorName = monitorData?.Name || `Camera ${Event.MonitorId}`;
@@ -94,6 +101,7 @@ export const EventListView = ({
   onLoadMore,
   eventTagMap,
   eventFilters,
+  minStreamingPort,
 }: EventListViewProps) => {
   const { t } = useTranslation();
 
@@ -147,6 +155,7 @@ export const EventListView = ({
           accessToken={accessToken}
           eventTagMap={eventTagMap}
           eventFilters={eventFilters}
+          minStreamingPort={minStreamingPort}
         />
       ))}
       {footer}

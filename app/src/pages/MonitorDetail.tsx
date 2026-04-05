@@ -32,6 +32,7 @@ import { getOrientedResolution, parseMonitorRotation } from '../lib/monitor-rota
 import { isZmVersionAtLeast } from '../lib/zm-version';
 import { getMonitorRunState, monitorDotColor } from '../lib/monitor-status';
 import { useZoomPan } from '../hooks/useZoomPan';
+import { useServerUrls } from '../hooks/useServerUrls';
 
 // Extracted hooks and components
 import { usePTZControl, useAlarmControl, useModeControl, useMonitorNavigation } from './hooks';
@@ -51,6 +52,7 @@ export default function MonitorDetail() {
   const [showPTZ, setShowPTZ] = useState(true);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showZones, setShowZones] = useState(false);
+  const [protocol, setProtocol] = useState('MJPEG');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
 
@@ -103,11 +105,15 @@ export default function MonitorDetail() {
     onSwipeRight,
   });
 
+  const { portalPath, apiBaseUrl } = useServerUrls(monitor?.Monitor.ServerId);
+  const resolvedPortalUrl = portalPath ? portalPath.replace(/\/index\.php$/, '') : currentProfile?.portalUrl || '';
+
   const { handlePTZCommand } = usePTZControl({
-    portalUrl: currentProfile?.portalUrl || '',
+    portalUrl: resolvedPortalUrl,
     monitorId: monitor?.Monitor.Id || '',
     accessToken,
     isContinuous,
+    minStreamingPort: currentProfile?.minStreamingPort,
   });
 
   const {
@@ -120,6 +126,7 @@ export default function MonitorDetail() {
     handleAlarmToggle,
   } = useAlarmControl({
     monitorId: monitor?.Monitor.Id,
+    apiBaseUrl,
   });
 
   const { isModeUpdating, handleModeChange } = useModeControl({
@@ -367,8 +374,9 @@ export default function MonitorDetail() {
               profile={currentProfile}
               externalMediaRef={mediaRef}
               objectFit={isFullscreen ? 'contain' : settings.monitorDetailFeedFit}
-              showStatus={true}
+              showControls={true}
               className="data-[testid=monitor-player]"
+              onProtocolChange={setProtocol}
             />
             <ZoneOverlay
               zones={zones}
@@ -379,6 +387,11 @@ export default function MonitorDetail() {
               visible={showZones && !isZonesLoading}
             />
           </div>
+          {settings.showProtocolLabel && (
+            <span className="absolute bottom-2 right-2 z-10 text-[10px] px-1.5 py-0.5 rounded bg-black/50 text-white/90 font-medium pointer-events-none">
+              {protocol}
+            </span>
+          )}
           <ZoomControls
             onZoomIn={zoomPan.zoomIn}
             onZoomOut={zoomPan.zoomOut}
