@@ -159,11 +159,12 @@ export function useEventFilters(): UseEventFiltersReturn {
         const s = searchParams.get('startDateTime');
         const e = searchParams.get('endDateTime');
         const f = searchParams.get('favorites');
-        _setMonitorIds(m ? m.split(',') : []);
-        _setTagIds(t ? t.split(',') : []);
-        _setStartDate(s ? formatInputDate(s) : '');
-        _setEndDate(e ? formatInputDate(e) : '');
-        _setFavoritesOnly(f === 'true');
+        // Use wrapped setters so URL filters persist to settings store
+        setSelectedMonitorIds(m ? m.split(',') : []);
+        setSelectedTagIds(t ? t.split(',') : []);
+        setStartDateInput(s ? formatInputDate(s) : '');
+        setEndDateInput(e ? formatInputDate(e) : '');
+        setFavoritesOnly(f === 'true');
       }
       return;
     }
