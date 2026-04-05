@@ -150,25 +150,6 @@ describe('MontageMonitor', () => {
     });
   });
 
-  it('generates connKey on mount', async () => {
-    const regenerateConnKey = vi.fn(() => 12345);
-    useMonitorStore.setState({ regenerateConnKey });
-
-    render(
-      <MontageMonitor
-        monitor={mockMonitor}
-        status={mockStatus}
-        currentProfile={mockProfile}
-        accessToken="test-token"
-        navigate={mockNavigate}
-      />
-    );
-
-    await waitFor(() => {
-      expect(regenerateConnKey).toHaveBeenCalledWith('1');
-    });
-  });
-
   it('displays running status badge for connected monitor', async () => {
     render(
       <MontageMonitor

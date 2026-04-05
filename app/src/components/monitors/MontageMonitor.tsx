@@ -18,8 +18,6 @@ import { useShallow } from 'zustand/react/shallow';
 import type { Monitor, MonitorStatus, Profile } from '../../api/types';
 import { useAuthStore } from '../../stores/auth';
 import { getMonitorRunState, monitorDotColor } from '../../lib/monitor-status';
-import { useStreamLifecycle } from '../../hooks/useStreamLifecycle';
-import { useServerUrls } from '../../hooks/useServerUrls';
 import { useSettingsStore } from '../../stores/settings';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -30,7 +28,6 @@ import { cn } from '../../lib/utils';
 import { downloadSnapshotFromElement } from '../../lib/download';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { log } from '../../lib/logger';
 import { handleKeyClick } from '../../lib/tv-a11y';
 
 interface MontageMonitorProps {
@@ -66,32 +63,9 @@ function MontageMonitorComponent({
   const settings = useSettingsStore(
     useShallow((state) => state.getProfileSettings(currentProfile?.id || ''))
   );
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [protocol, setProtocol] = useState('MJPEG');
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
   const resolvedFit = objectFit ?? 'cover';
-  const { portalPath } = useServerUrls(monitor.ServerId);
-  const resolvedPortalUrl = portalPath ? portalPath.replace(/\/index\.php$/, '') : currentProfile?.portalUrl;
-
-  // Stream lifecycle: connKey generation, CMD_QUIT on regen/unmount, media abort
-  const { connKey } = useStreamLifecycle({
-    monitorId: monitor.Id,
-    monitorName: monitor.Name,
-    portalUrl: resolvedPortalUrl,
-    accessToken,
-    viewMode: settings.viewMode,
-    mediaRef,
-    logFn: log.montageMonitor,
-  });
-
-  // Reset image loaded state when connKey changes (new stream connection)
-  const prevConnKeyForLoadRef = useRef(0);
-  if (connKey !== 0 && connKey !== prevConnKeyForLoadRef.current) {
-    prevConnKeyForLoadRef.current = connKey;
-    if (imageLoaded) {
-      setImageLoaded(false);
-    }
-  }
 
   // Handle snapshot download
   const handleDownload = (e: React.MouseEvent) => {
@@ -240,7 +214,6 @@ function MontageMonitorComponent({
           objectFit={resolvedFit}
           muted={true}
           className="w-full h-full"
-          onLoad={() => setImageLoaded(true)}
           onProtocolChange={setProtocol}
         />
         {settings.montageShowToolbar && settings.showProtocolLabel && (

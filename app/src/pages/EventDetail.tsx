@@ -402,7 +402,7 @@ export default function EventDetail() {
             // ZMS playback for JPEG-only events
             currentProfile && (
               <ZmsEventPlayer
-                portalUrl={currentProfile.portalUrl}
+                portalUrl={resolvedPortalUrl}
                 eventId={event.Event.Id}
                 token={accessToken || undefined}
                 apiUrl={currentProfile.apiUrl}
