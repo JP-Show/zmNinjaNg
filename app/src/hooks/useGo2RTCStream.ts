@@ -139,7 +139,7 @@ export function useGo2RTCStream(options: UseGo2RTCStreamOptions): UseGo2RTCStrea
           videoRtc.video.disablePictureInPicture = true;
           videoRtc.video.playsInline = true;
           if (controls) {
-            videoRtc.video.controlsList = 'nodownload noplaybackrate';
+            videoRtc.video.setAttribute('controlsList', 'nodownload noplaybackrate');
             // Prevent clicks on video controls from navigating to monitor detail
             videoRtc.video.addEventListener('click', (e: Event) => e.stopPropagation());
           }

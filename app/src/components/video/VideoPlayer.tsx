@@ -290,7 +290,6 @@ export function VideoPlayer({
   }, [isWebRTC, status.state, hasVideoFrames, onLoad]);
 
   // Whether we're in a "waiting for video" state
-  const isWaitingForVideo = isWebRTC && status.state === 'connected' && !hasVideoFrames;
   // Show VideoOff placeholder only when truly no video:
   // - Go2RTC connecting (not yet connected)
   // - MJPEG with no stream URL or error
