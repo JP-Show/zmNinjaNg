@@ -339,19 +339,20 @@ export function VideoPlayer({
         />
       )}
 
-      {/* Protocol status badge */}
-      {showStatus && (
-        <div className="absolute bottom-1.5 right-1.5 z-20 flex gap-1.5" data-testid="video-player-status">
-          {isWaitingForVideo && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 animate-pulse bg-black/40 text-white border-white/20">
-              {t('video.connecting')}
-            </Badge>
-          )}
-          <Badge variant={statusBadgeVariant} className="text-[10px] px-1.5 py-0 h-4 bg-black/40 text-white border-white/20">
-            {protocolLabel}
+      {/* Protocol status badge — always rendered when showStatus, hidden via opacity to avoid flash on re-render */}
+      <div
+        className={`absolute bottom-1.5 right-1.5 z-20 flex gap-1.5 transition-opacity duration-200 ${showStatus ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        data-testid="video-player-status"
+      >
+        {isWaitingForVideo && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 animate-pulse bg-black/40 text-white border-white/20">
+            {t('video.connecting')}
           </Badge>
-        </div>
-      )}
+        )}
+        <Badge variant={statusBadgeVariant} className="text-[10px] px-1.5 py-0 h-4 bg-black/40 text-white border-white/20">
+          {protocolLabel}
+        </Badge>
+      </div>
 
       {/* Error overlay */}
       {status.state === 'error' && status.error && (
