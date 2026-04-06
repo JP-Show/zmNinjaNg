@@ -8,7 +8,6 @@
 
 - feat: per-component log level control in settings [\#101](https://github.com/pliablepixels/zmNinjaNG/issues/101)
 - feat: timeline view UX improvements [\#99](https://github.com/pliablepixels/zmNinjaNG/issues/99)
-- android TV/Firestick app [\#96](https://github.com/pliablepixels/zmNinjaNG/issues/96)
 
 **Fixed bugs:**
 
