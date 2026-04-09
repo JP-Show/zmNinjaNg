@@ -75,6 +75,13 @@ vi.mock('../../../stores/auth', () => ({
     selector({ version: '1.38.0' }),
 }));
 
+vi.mock('../../../stores/notifications', () => {
+  const store = () => 0;
+  store.getState = () => ({ profileEvents: {} });
+  store.subscribe = () => () => {};
+  return { useNotificationStore: store };
+});
+
 describe('MontageMonitor', () => {
   const mockMonitor: Monitor = {
     Id: '1',

@@ -136,6 +136,15 @@
   display: none !important;
 }
 
+/* Alarm pulse animation for montage monitor headers */
+@keyframes alarm-pulse {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(220, 38, 38, 0.5); }
+}
+.montage-alarm-pulse {
+  animation: alarm-pulse 2s ease-in-out infinite;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

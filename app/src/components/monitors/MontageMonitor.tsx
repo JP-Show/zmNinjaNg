@@ -12,7 +12,7 @@
  * - Fullscreen mode: header slides in on hover from top edge
  */
 
-import { useState, useRef, memo } from 'react';
+import { useState, useRef, memo, useEffect } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import type { Monitor, MonitorStatus, Profile } from '../../api/types';
@@ -23,12 +23,19 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { VideoPlayer } from '../video/VideoPlayer';
-import { Clock, ChartGantt, Download, Volume2, VolumeX, Pin } from 'lucide-react';
+import { Clock, ChartGantt, Download, Volume2, VolumeX, Pin, MoreVertical } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { downloadSnapshotFromElement } from '../../lib/download';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { handleKeyClick } from '../../lib/tv-a11y';
+import { useNotificationStore } from '../../stores/notifications';
 
 interface MontageMonitorProps {
   monitor: Monitor;
@@ -69,6 +76,51 @@ function MontageMonitorComponent({
   const resolvedFit = objectFit ?? 'cover';
   const isRTC = monitor.Go2RTCEnabled === true && !!currentProfile?.go2rtcUrl;
 
+  // Alarm pulse — subscribe to notification store for new events on this monitor
+  const ALARM_PULSE_MS = 6000;
+  const [isAlarming, setIsAlarming] = useState(false);
+  const [monitorEventCount, setMonitorEventCount] = useState(0);
+  const alarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSeenRef = useRef(0);
+
+  useEffect(() => {
+    if (!currentProfile) return;
+    const profileId = currentProfile.id;
+    const monitorId = monitor.Id;
+
+    const updateFromState = (state: { profileEvents: Record<string, Array<{ MonitorId: number; receivedAt: number }>> }) => {
+      const events = state.profileEvents[profileId];
+      if (!events?.length) return;
+      const monitorEvents = events.filter((e) => String(e.MonitorId) === monitorId);
+      setMonitorEventCount(monitorEvents.length);
+      const latest = monitorEvents[0];
+      if (!latest || latest.receivedAt === lastSeenRef.current) return;
+      lastSeenRef.current = latest.receivedAt;
+      if (Date.now() - latest.receivedAt < ALARM_PULSE_MS) {
+        if (alarmTimerRef.current) clearTimeout(alarmTimerRef.current);
+        setIsAlarming(true);
+        alarmTimerRef.current = setTimeout(() => setIsAlarming(false), ALARM_PULSE_MS);
+      }
+    };
+
+    // Seed initial count and lastSeen
+    const initialState = useNotificationStore.getState();
+    const initialEvents = initialState.profileEvents[profileId];
+    if (initialEvents?.length) {
+      const count = initialEvents.filter((e) => String(e.MonitorId) === monitorId).length;
+      setMonitorEventCount(count);
+      const match = initialEvents.find((e) => String(e.MonitorId) === monitorId);
+      if (match) lastSeenRef.current = match.receivedAt;
+    }
+
+    const unsub = useNotificationStore.subscribe(updateFromState);
+
+    return () => {
+      unsub();
+      if (alarmTimerRef.current) clearTimeout(alarmTimerRef.current);
+    };
+  }, [currentProfile?.id, monitor.Id]);
+
   // Handle snapshot download
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -107,7 +159,8 @@ function MontageMonitorComponent({
                 showOverlay ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
               )
             : "bg-card border-b",
-          isEditing && !isFullscreen ? "hover:bg-accent/50" : "cursor-default"
+          isEditing && !isFullscreen ? "hover:bg-accent/50" : "cursor-default",
+          isAlarming && "montage-alarm-pulse"
         )}
       >
         {/* Monitor status and name */}
@@ -133,21 +186,7 @@ function MontageMonitorComponent({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-6 w-6",
-              isFullscreen ? "text-white hover:bg-white/20" : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={handleDownload}
-            title={t('montage.save_snapshot')}
-            aria-label={t('montage.save_snapshot')}
-            data-testid="montage-download-btn"
-          >
-            <Download className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-6 w-6",
+              "h-6 w-6 relative",
               isFullscreen ? "text-white hover:bg-white/20" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={(e) => {
@@ -159,23 +198,11 @@ function MontageMonitorComponent({
             data-testid="montage-events-btn"
           >
             <Clock className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-6 w-6",
-              isFullscreen ? "text-white hover:bg-white/20" : "text-muted-foreground hover:text-foreground"
+            {monitorEventCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-destructive text-destructive-foreground opacity-50 text-[8px] font-medium flex items-center justify-center px-0.5 leading-none">
+                {monitorEventCount > 99 ? '99+' : monitorEventCount}
+              </span>
             )}
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/timeline?monitorId=${monitor.Id}`);
-            }}
-            title={t('sidebar.timeline')}
-            aria-label={t('sidebar.timeline')}
-            data-testid="montage-timeline-btn"
-          >
-            <ChartGantt className="h-3 w-3" />
           </Button>
           {isRTC && (
             <Button
@@ -196,6 +223,38 @@ function MontageMonitorComponent({
               {isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
             </Button>
           )}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-6 w-6",
+                  isFullscreen ? "text-white hover:bg-white/20" : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={(e) => e.stopPropagation()}
+                data-testid="montage-more-btn"
+              >
+                <MoreVertical className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" className="min-w-[140px]">
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); handleDownload(e as unknown as React.MouseEvent); }}
+                data-testid="montage-download-btn"
+              >
+                <Download className="h-3.5 w-3.5 mr-2" />
+                {t('montage.save_snapshot')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); navigate(`/timeline?monitorId=${monitor.Id}`); }}
+                data-testid="montage-timeline-btn"
+              >
+                <ChartGantt className="h-3.5 w-3.5 mr-2" />
+                {t('sidebar.timeline')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
