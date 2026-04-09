@@ -199,7 +199,7 @@ export default function Monitors() {
             />
           )}
           <Select value={settings.monitorsFeedFit} onValueChange={handleFeedFitChange}>
-            <SelectTrigger className="h-8 sm:h-9 w-24" data-testid="monitors-fit-select">
+            <SelectTrigger className="h-8 sm:h-9 w-auto" data-testid="monitors-fit-select">
               <SelectValue placeholder={t('monitors.feed_fit')} />
             </SelectTrigger>
             <SelectContent>
@@ -211,9 +211,8 @@ export default function Monitors() {
               </SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => refetch()} variant="outline" size="sm" className="gap-2 h-8 sm:h-9" data-testid="monitors-refresh-button">
-            <RefreshCw className="h-4 w-4 sm:mr-0" />
-            <span className="hidden sm:inline">{t('common.refresh')}</span>
+          <Button onClick={() => refetch()} variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" title={t('common.refresh')} data-testid="monitors-refresh-button">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
