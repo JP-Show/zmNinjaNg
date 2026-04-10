@@ -18,7 +18,7 @@ import type { Profile } from '../../../api/types';
 import type { ProfileSettings } from '../../../stores/settings';
 
 /** Internal grid always uses 12 columns for fine-grained positioning. */
-export const INTERNAL_COLS = 12;
+export const INTERNAL_COLS = 60;
 
 const parseAspectRatioValue = (monitor: Monitor): number => {
   const ratio = getMonitorAspectRatio(monitor.Width, monitor.Height, monitor.Orientation);
