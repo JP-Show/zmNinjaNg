@@ -23,7 +23,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { VideoPlayer } from '../video/VideoPlayer';
-import { Clock, ChartGantt, Download, Volume2, VolumeX, Pin, MoreVertical, RefreshCw } from 'lucide-react';
+import { Clock, ChartGantt, Download, Volume2, VolumeX, Pin, MoreVertical } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { downloadSnapshotFromElement } from '../../lib/download';
 import {
@@ -36,7 +36,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { handleKeyClick } from '../../lib/tv-a11y';
 import { useNotificationStore } from '../../stores/notifications';
-import { streamRefreshEvent } from '../../pages/Montage';
+/* import { streamRefreshEvent } from '../../pages/Montage'; */
 
 interface MontageMonitorProps {
   monitor: Monitor;
@@ -78,7 +78,7 @@ function MontageMonitorComponent({
   const isRTC = monitor.Go2RTCEnabled === true && !!currentProfile?.go2rtcUrl;
 
   // ESTADO DE REFRESH
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  /* const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const handleRefresh = ((e: CustomEvent) => {
@@ -97,7 +97,7 @@ function MontageMonitorComponent({
     return () => {
       streamRefreshEvent.removeEventListener('refresh-stream', handleRefresh);
     };
-  }, [monitor.Id]);
+  }, [monitor.Id]); */
 
   // Alarm pulse — subscribe to notification store for new events on this monitor
   const ALARM_PULSE_MS = 6000;
