@@ -116,7 +116,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@capacitor/assets": "^1.0.0",
+    "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
     "@radix-ui/react-slot": "^1.2.4",
@@ -135,7 +135,7 @@
     "@wdio/cli": "^9.26.1",
     "@wdio/globals": "^9.26.1",
     "@wdio/local-runner": "^9.26.1",
-    "@wdio/mocha-framework": "^6.1.17",
+    "@wdio/mocha-framework": "^9.26.1",
     "@wdio/spec-reporter": "^9.26.1",
     "@wdio/types": "^9.26.1",
     "autoprefixer": "^10.4.22",
