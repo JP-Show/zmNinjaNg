@@ -16,7 +16,8 @@ import { useGo2RTCStream } from '../../hooks/useGo2RTCStream';
 import { useMonitorStream } from '../../hooks/useMonitorStream';
 import { log, LogLevel } from '../../lib/logger';
 import { Button } from '../ui/button';
-import { VideoOff } from 'lucide-react';
+import { VideoOff, RefreshCw } from 'lucide-react';
+import { streamRefreshEvent } from '../../pages/Montage';
 
 /** Seconds to wait for video frames after Go2RTC reports "connected" */
 const GO2RTC_VIDEO_TIMEOUT_S = 8;
@@ -240,7 +241,7 @@ export function VideoPlayer({
     }
   }, [externalMediaRef, effectiveStreamingMethod, mjpegStream.streamUrl, go2rtcStream.state, go2rtcStream]);
 
-  // Derive current status
+// Derive current status
   const isWebRTC = effectiveStreamingMethod === 'webrtc';
   const status = useMemo(() => ({
     state: isWebRTC ? go2rtcStream.state : (mjpegStream.streamUrl ? 'connected' : 'connecting'),
@@ -248,7 +249,10 @@ export function VideoPlayer({
     protocol: isWebRTC ? (go2rtcStream.activeProtocol || 'go2rtc') : 'mjpeg',
   }), [isWebRTC, go2rtcStream.state, go2rtcStream.error, go2rtcStream.activeProtocol, mjpegStream.streamUrl]);
 
-  const handleRetry = () => {
+  // --- NOVA LÓGICA DE REFRESH ROBUSTO ---
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRetry = useCallback(() => {
     log.videoPlayer('Retry requested', LogLevel.INFO, { monitorId: monitor.Id, go2rtcFailed });
 
     if (go2rtcFailed) {
@@ -260,7 +264,40 @@ export function VideoPlayer({
     } else {
       mjpegStream.regenerateConnection();
     }
-  };
+  }, [monitor.Id, go2rtcFailed, isWebRTC, go2rtcStream, mjpegStream]);
+
+  const handleRetryRef = useRef(handleRetry);
+  useEffect(() => {
+    handleRetryRef.current = handleRetry;
+  }, [handleRetry]);
+
+  useEffect(() => {
+    const handleRefresh = ((e: CustomEvent) => {
+      if (e.detail.monitorId === monitor.Id || e.detail.monitorId === String(monitor.Id)) {
+        log.videoPlayer('Manual refresh triggered', LogLevel.INFO, { monitorId: monitor.Id });
+
+        // 1. Zera a imagem para derrubar o socket TCP físico da stream.
+        // Isso força o processo ZMS no servidor a morrer por "broken pipe".
+        if (imgRef.current) {
+          imgRef.current.src = '';
+        }
+        
+        setIsRefreshing(true);
+
+        // 2. Dá ao ZoneMinder 1.5 segundos para limpar a memória antes de abrir a nova conexão.
+        setTimeout(() => {
+          handleRetryRef.current();
+          setIsRefreshing(false);
+        }, 1500);
+      }
+    }) as EventListener;
+
+    streamRefreshEvent.addEventListener('refresh-stream', handleRefresh);
+    return () => {
+      streamRefreshEvent.removeEventListener('refresh-stream', handleRefresh);
+    };
+  }, [monitor.Id]);
+  // ----------------------------------------
 
   // Derive display protocol label
   const displayProtocol = isWebRTC
@@ -289,24 +326,23 @@ export function VideoPlayer({
     }
   }, [isWebRTC, status.state, hasVideoFrames, onLoad]);
 
-  // Whether we're in a "waiting for video" state
-  // Show VideoOff placeholder only when truly no video:
-  // - Go2RTC connecting (not yet connected)
-  // - MJPEG with no stream URL or error
-  // Don't show during isWaitingForVideo — Go2RTC container may already be rendering
   const showNoVideo = (isWebRTC && status.state === 'connecting') ||
-    (!isWebRTC && (!mjpegStream.streamUrl || mjpegError));
+    (!isWebRTC && (!mjpegStream.streamUrl || mjpegError)) || isRefreshing;
 
   return (
     <div className="relative w-full h-full" data-testid="video-player">
-      {/* Background placeholder — shown until video/image loads */}
+      {/* Background placeholder */}
       {showNoVideo && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/30" data-testid="video-player-loading">
-          <VideoOff className="h-8 w-8 text-muted-foreground/40" />
+          {isRefreshing ? (
+            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground/40" />
+          ) : (
+            <VideoOff className="h-8 w-8 text-muted-foreground/40" />
+          )}
         </div>
       )}
 
-      {isWebRTC && (
+      {isWebRTC && !isRefreshing && (
         <div
           ref={containerRef}
           className={`w-full h-full ${className}`}
@@ -315,7 +351,7 @@ export function VideoPlayer({
         />
       )}
 
-      {!isWebRTC && mjpegStream.streamUrl && (
+      {!isWebRTC && mjpegStream.streamUrl && !isRefreshing && (
         <img
           ref={imgRef}
           className={`w-full h-full ${className}`}
@@ -329,7 +365,7 @@ export function VideoPlayer({
       )}
 
       {/* Error overlay */}
-      {status.state === 'error' && status.error && (
+      {status.state === 'error' && status.error && !isRefreshing && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white p-4" data-testid="video-player-error">
           <VideoOff className="h-10 w-10 text-white/60 mb-3" />
           <p className="text-center text-sm mb-2">{t('video.connection_failed')}</p>
