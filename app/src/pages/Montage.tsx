@@ -59,7 +59,7 @@ export default function Montage() {
   const { currentProfile, settings } = useCurrentProfile();
   const accessToken = useAuthStore((state) => state.accessToken);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
+  // const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<string>("off");
 
   const { data, isLoading, error, refetch } = useQuery({
