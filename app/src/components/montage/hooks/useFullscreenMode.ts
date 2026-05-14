@@ -33,6 +33,19 @@ export function useFullscreenMode({
     setIsFullscreen(settings.montageIsFullscreen);
   }, [currentProfile?.id, settings.montageIsFullscreen]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+        if (currentProfile) {
+          updateSettings(currentProfile.id, { montageIsFullscreen: false });
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isFullscreen, currentProfile, updateSettings]);
+
   const handleToggleFullscreen = useCallback(
     (fullscreen: boolean) => {
       if (!currentProfile) return;
@@ -41,6 +54,15 @@ export function useFullscreenMode({
       updateSettings(currentProfile.id, {
         montageIsFullscreen: fullscreen,
       });
+    if (fullscreen) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
     },
     [currentProfile, updateSettings]
   );

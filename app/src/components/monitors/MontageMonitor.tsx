@@ -36,7 +36,6 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { handleKeyClick } from '../../lib/tv-a11y';
 import { useNotificationStore } from '../../stores/notifications';
-/* import { streamRefreshEvent } from '../../pages/Montage'; */
 
 interface MontageMonitorProps {
   monitor: Monitor;
@@ -76,28 +75,6 @@ function MontageMonitorComponent({
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement>(null);
   const resolvedFit = objectFit ?? 'cover';
   const isRTC = monitor.Go2RTCEnabled === true && !!currentProfile?.go2rtcUrl;
-
-  // ESTADO DE REFRESH
-  /* const [isRefreshing, setIsRefreshing] = useState(false);
-
-  useEffect(() => {
-    const handleRefresh = ((e: CustomEvent) => {
-      if (e.detail.monitorId === monitor.Id || e.detail.monitorId === String(monitor.Id)) {
-        // Desmonta o player para forçar o CMD_QUIT
-        setIsRefreshing(true); 
-        
-        // Aguarda 800ms para a rede e o servidor respirarem
-        setTimeout(() => {
-          setIsRefreshing(false); // Remonta o player limpo
-        }, 800);
-      }
-    }) as EventListener;
-
-    streamRefreshEvent.addEventListener('refresh-stream', handleRefresh);
-    return () => {
-      streamRefreshEvent.removeEventListener('refresh-stream', handleRefresh);
-    };
-  }, [monitor.Id]); */
 
   // Alarm pulse — subscribe to notification store for new events on this monitor
   const ALARM_PULSE_MS = 6000;

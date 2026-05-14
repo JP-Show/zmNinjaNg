@@ -12,14 +12,14 @@ import { useCurrentProfile } from '../hooks/useCurrentProfile';
 import { useBandwidthSettings } from '../hooks/useBandwidthSettings';
 import { useAuthStore } from '../stores/auth';
 import { useSettingsStore } from '../stores/settings';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTvKeyHandler } from '../hooks/useTvKeyHandler';
 import { useTvMode } from '../hooks/useTvMode';
 import { Button } from '../components/ui/button';
 import { MontageMonitor } from '../components/monitors/MontageMonitor';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { RefreshCw, Video, AlertCircle, Maximize, Pencil, ArrowLeftRight } from 'lucide-react';
+import { RefreshCw, Video, AlertCircle, Maximize, Pencil, ArrowLeftRight, Power, RotateCcw, Timer, TimerOff } from 'lucide-react';
 import { filterEnabledMonitors, filterMonitorsByGroup } from '../lib/filters';
 import { useGroupFilter } from '../hooks/useGroupFilter';
 import { GroupFilterSelect } from '../components/filters/GroupFilterSelect';
@@ -45,13 +45,6 @@ import { INTERNAL_COLS } from '../components/montage/hooks/useMontageGrid';
 
 const WrappedGridLayout = WidthProvider(GridLayout);
 
-export const streamRefreshEvent = new EventTarget();
-
-export function triggerStreamRefresh(monitorId?: string) {
-  const event = new CustomEvent('refresh-stream', { detail: { monitorId } });
-  streamRefreshEvent.dispatchEvent(event);
-}
-
 export default function Montage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -59,8 +52,7 @@ export default function Montage() {
   const { currentProfile, settings } = useCurrentProfile();
   const accessToken = useAuthStore((state) => state.accessToken);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  // const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState<string>("off");
+  const [streamKey, setStreamKey] = useState(Date.now());
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['monitors'],
@@ -189,15 +181,6 @@ export default function Montage() {
     Enter: handleDpadEnter,
   });
 
-  // Focus the monitor element when index changes in TV mode
-  useEffect(() => {
-    if (!isTvMode || monitors.length === 0) return;
-    const el = document.querySelector(
-      `[data-testid="montage-monitor-${monitors[focusedMonitorIndex]?.Monitor.Id}"]`
-    ) as HTMLElement | null;
-    el?.focus();
-  }, [isTvMode, focusedMonitorIndex, monitors]);
-
   // Pinch-to-zoom (disabled in fullscreen to avoid gesture conflicts)
   const pinchZoom = usePinchZoom({
     minScale: 0.5,
@@ -248,30 +231,40 @@ export default function Montage() {
     setIsEditMode((prev) => !prev);
   };
 
-  // Função Refresh
+  const handleAppReload = useCallback(() => {
+    window.location.reload();
+  }, []);
 
-  const handleManualRefresh = useCallback(() => {
-    monitors.forEach((m, index) => {
-      // Mantemos a cascata para não engasgar a rede local
-      setTimeout(() => {
-        triggerStreamRefresh(m.Monitor.Id);
-      }, index * 1000); // Aumentei para 1 segundo para dar tempo do ZM respirar
-    });
-  }, [monitors]);
+  const handleResetStreams = useCallback(() => {
+    setStreamKey(Date.now());
+    refetch();
+  }, [refetch]);
 
-  const savedCallback = useRef(handleManualRefresh);
+  const autoRefreshEnabled = settings.montageAutoRefreshEnabled ?? true;
+  const autoRefreshInterval = settings.montageAutoRefreshInterval ?? 300;
+
+  const handleToggleAutoRefresh = useCallback(() => {
+    if (currentProfile) {
+      updateSettings(currentProfile.id, { montageAutoRefreshEnabled: !autoRefreshEnabled });
+    }
+  }, [currentProfile, updateSettings, autoRefreshEnabled]);
+
+  // Focus the monitor element when index changes in TV mode
   useEffect(() => {
-    savedCallback.current = handleManualRefresh;
-  }, [handleManualRefresh]);
+    if (!isTvMode || monitors.length === 0) return;
+    const el = document.querySelector(
+      `[data-testid="montage-monitor-${monitors[focusedMonitorIndex]?.Monitor.Id}"]`
+    ) as HTMLElement | null;
+    el?.focus();
+  }, [isTvMode, focusedMonitorIndex, monitors]);
 
   useEffect(() => {
-    if (autoRefreshInterval === "off") return;
-    const ms = parseInt(autoRefreshInterval) * 60 * 1000;
-    const timer = setInterval(() => {
-      savedCallback.current();
-    }, ms);
-    return () => clearInterval(timer);
-  }, [autoRefreshInterval]);
+    if (!autoRefreshEnabled) return;
+    const interval = setInterval(() => {
+      handleResetStreams();
+    }, autoRefreshInterval * 1000);
+    return () => clearInterval(interval);
+  }, [autoRefreshEnabled, autoRefreshInterval, handleResetStreams]);
 
   // Loading state
   if (isLoading) {
@@ -359,35 +352,15 @@ export default function Montage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={() => refetch()} variant="outline" size="sm" className="h-8 sm:h-9" data-testid="montage-refresh-button">
-                <RefreshCw className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('common.refresh')}</span>
+              <Button onClick={handleAppReload} variant="outline" size="sm" className="h-8 sm:h-9" title="Reload App">
+                <Power className="h-4 w-4" />
               </Button>
-
-              {/* Botão Reset Manual */}
-              <Button 
-                onClick={handleManualRefresh} 
-                variant="outline" 
-                size="sm" 
-                className="h-8 sm:h-9 text-orange-500"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Reset Streams
+              <Button onClick={handleToggleAutoRefresh} variant={autoRefreshEnabled ? 'default' : 'outline'} size="sm" className="h-8 sm:h-9" title="Auto Reset (5m)">
+                {autoRefreshEnabled ? <Timer className="h-4 w-4" /> : <TimerOff className="h-4 w-4" />}
               </Button>
-
-              {/* Seletor Reset Automático */}
-              <Select value={autoRefreshInterval} onValueChange={setAutoRefreshInterval}>
-                <SelectTrigger className="h-8 sm:h-9 w-[120px]">
-                  <SelectValue placeholder="Auto Refresh" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="off">Auto: Off</SelectItem>
-                  <SelectItem value="1">1 Minuto</SelectItem>
-                  <SelectItem value="5">5 Minutos</SelectItem>
-                  <SelectItem value="60">1 Hora</SelectItem>
-                </SelectContent>
-              </Select>
-
+              <Button onClick={handleResetStreams} variant="outline" size="sm" className="h-8 sm:h-9" title="Reset Streams">
+                <RotateCcw className="h-4 w-4" />
+              </Button>
               <Button
                 onClick={handleEditModeToggle}
                 variant={isEditMode ? 'default' : 'outline'}
@@ -438,6 +411,10 @@ export default function Montage() {
           onExitFullscreen={() => handleToggleFullscreen(false)}
           showLabels={showMonitorLabels}
           onToggleLabels={() => setShowMonitorLabels((prev) => !prev)}
+          onAppReload={handleAppReload}
+          onResetStreams={handleResetStreams}
+          autoRefreshEnabled={autoRefreshEnabled}
+          onToggleAutoRefresh={handleToggleAutoRefresh}
         />
       )}
 
@@ -482,35 +459,33 @@ export default function Montage() {
               onDragStop={handleDragStop}
               onResizeStop={handleResizeStop}
             >
-              
-            {monitors.map(({ Monitor, Monitor_Status }, idx) => (
-              <div
-                key={Monitor.Id}
-                className={cn(
-                  "relative",
-                  isMonitorPinned(Monitor.Id) && "pin-locked",
-                  isTvMode && idx === focusedMonitorIndex && "ring-2 ring-primary"
-                )}
-                data-testid={`montage-monitor-${Monitor.Id}`}
-                tabIndex={isTvMode ? 0 : undefined}
-              >
-                <MontageMonitor
-                  key={`${Monitor}`} // Atualiza individualmente
-                  monitor={Monitor}
-                  status={Monitor_Status}
-                  currentProfile={currentProfile}
-                  accessToken={accessToken}
-                  navigate={navigate}
-                  isFullscreen={isFullscreen}
-                  isEditing={isEditMode}
-                  isPinned={isMonitorPinned(Monitor.Id)}
-                  onPinToggle={() => togglePinMonitor(Monitor.Id)}
-                  objectFit={settings.montageFeedFit}
-                  showOverlay={showMonitorLabels}
-                />
-              </div>
-            ))}
-
+              {monitors.map(({ Monitor, Monitor_Status }, idx) => (
+                <div
+                  key={Monitor.Id}
+                  className={cn(
+                    "relative",
+                    isMonitorPinned(Monitor.Id) && "pin-locked",
+                    isTvMode && idx === focusedMonitorIndex && "ring-2 ring-primary"
+                  )}
+                  data-testid={`montage-monitor-${Monitor.Id}`}
+                  tabIndex={isTvMode ? 0 : undefined}
+                >
+                  <MontageMonitor
+                    key={`${Monitor.Id}-${streamKey}`}
+                    monitor={Monitor}
+                    status={Monitor_Status}
+                    currentProfile={currentProfile}
+                    accessToken={accessToken}
+                    navigate={navigate}
+                    isFullscreen={isFullscreen}
+                    isEditing={isEditMode}
+                    isPinned={isMonitorPinned(Monitor.Id)}
+                    onPinToggle={() => togglePinMonitor(Monitor.Id)}
+                    objectFit={settings.montageFeedFit}
+                    showOverlay={showMonitorLabels}
+                  />
+                </div>
+              ))}
             </WrappedGridLayout>
           </div>
         </div>

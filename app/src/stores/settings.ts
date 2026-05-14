@@ -44,6 +44,8 @@ export interface ProfileSettings {
   insomnia: boolean; // Global: Keep screen awake across all pages
   monitorDetailInsomnia: boolean; // @deprecated - use global insomnia instead
   montageInsomnia: boolean; // @deprecated - use global insomnia instead
+  montageAutoRefreshEnabled: boolean; // Auto refresh to enable
+  montageAutoRefreshInterval: number; // Interval of autorefresh
   eventMontageFilters: {
     monitorIds: string[];
     cause: string;
@@ -164,6 +166,8 @@ export const DEFAULT_SETTINGS: ProfileSettings = {
   insomnia: false,
   monitorDetailInsomnia: false,
   montageInsomnia: false,
+  montageAutoRefreshEnabled: true,
+  montageAutoRefreshInterval: 300,
   eventMontageFilters: {
     monitorIds: [],
     cause: 'all',
