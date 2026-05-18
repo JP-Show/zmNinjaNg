@@ -45,26 +45,37 @@ import { INTERNAL_COLS } from '../components/montage/hooks/useMontageGrid';
 
 const WrappedGridLayout = WidthProvider(GridLayout);
 
-export default function Montage() {
+interface MontageProps {
+  standaloneProfile?: any;
+}
+
+export default function Montage({ standaloneProfile }: MontageProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const bandwidth = useBandwidthSettings();
-  const { currentProfile, settings } = useCurrentProfile();
+  
+  const { currentProfile: globalProfile, settings: globalSettings } = useCurrentProfile();
+  const getProfileSettings = useSettingsStore((state) => state.getProfileSettings);
+  const updateSettings = useSettingsStore((state) => state.updateProfileSettings);
+
+  const currentProfile = standaloneProfile || globalProfile;
+  const settings = standaloneProfile ? getProfileSettings(standaloneProfile.id) : globalSettings;
+
   const accessToken = useAuthStore((state) => state.accessToken);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [streamKey, setStreamKey] = useState(Date.now());
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['monitors'],
+    queryKey: ['monitors', currentProfile?.id],
     queryFn: getMonitors,
     enabled: !!currentProfile && isAuthenticated,
     refetchInterval: bandwidth.monitorStatusInterval,
   });
-  const updateSettings = useSettingsStore((state) => state.updateProfileSettings);
+  
   const { isFilterActive, filteredMonitorIds } = useGroupFilter();
 
   // Keep screen awake when Insomnia is enabled
-  useInsomnia({ enabled: settings.insomnia });
+  useInsomnia({ enabled: settings?.insomnia });
 
   // Detect mobile viewport
   const [isMobile, setIsMobile] = useState(false);
@@ -90,13 +101,13 @@ export default function Montage() {
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Active saved layout name (persisted in settings)
-  const activeLayoutName = settings.montageActiveLayoutName;
+  const activeLayoutName = settings?.montageActiveLayoutName;
 
   // Monitor label overlay toggle for fullscreen mode
   const [showMonitorLabels, setShowMonitorLabels] = useState(false);
 
   // Toolbar visibility (controlled from app header eye button)
-  const showToolbar = settings.montageShowToolbar;
+  const showToolbar = settings?.montageShowToolbar;
 
   // Fullscreen mode
   const { isFullscreen, handleToggleFullscreen } =
@@ -206,7 +217,7 @@ export default function Montage() {
   // Saved layout handlers
   const handleSaveLayout = (name: string) => {
     if (!currentProfile) return;
-    const saved = settings.montageSavedLayouts || [];
+    const saved = settings?.montageSavedLayouts || [];
     const entry = { name, layout: [...layout], displayCols: gridCols };
     updateSettings(currentProfile.id, {
       montageSavedLayouts: [...saved, entry],
@@ -222,7 +233,7 @@ export default function Montage() {
 
   const handleDeleteLayout = (index: number) => {
     if (!currentProfile) return;
-    const saved = [...(settings.montageSavedLayouts || [])];
+    const saved = [...(settings?.montageSavedLayouts || [])];
     saved.splice(index, 1);
     updateSettings(currentProfile.id, { montageSavedLayouts: saved });
   };
@@ -240,8 +251,8 @@ export default function Montage() {
     refetch();
   }, [refetch]);
 
-  const autoRefreshEnabled = settings.montageAutoRefreshEnabled ?? true;
-  const autoRefreshInterval = settings.montageAutoRefreshInterval ?? 300;
+  const autoRefreshEnabled = settings?.montageAutoRefreshEnabled ?? true;
+  const autoRefreshInterval = settings?.montageAutoRefreshInterval ?? 300;
 
   const handleToggleAutoRefresh = useCallback(() => {
     if (currentProfile) {
@@ -334,12 +345,12 @@ export default function Montage() {
                 gridCols={gridCols}
                 activeLayoutName={activeLayoutName}
                 onApplyGridLayout={handleApplyGridLayoutWithClear}
-                savedLayouts={settings.montageSavedLayouts || []}
+                savedLayouts={settings?.montageSavedLayouts || []}
                 onSaveLayout={handleSaveLayout}
                 onLoadLayout={handleLoadLayout}
                 onDeleteLayout={handleDeleteLayout}
               />
-              <Select value={settings.montageFeedFit} onValueChange={handleFeedFitChange}>
+              <Select value={settings?.montageFeedFit} onValueChange={handleFeedFitChange}>
                 <SelectTrigger className="h-8 sm:h-9 w-[80px]" data-testid="montage-fit-select">
                   <SelectValue />
                 </SelectTrigger>
@@ -481,7 +492,7 @@ export default function Montage() {
                     isEditing={isEditMode}
                     isPinned={isMonitorPinned(Monitor.Id)}
                     onPinToggle={() => togglePinMonitor(Monitor.Id)}
-                    objectFit={settings.montageFeedFit}
+                    objectFit={settings?.montageFeedFit}
                     showOverlay={showMonitorLabels}
                   />
                 </div>

@@ -3,10 +3,11 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
-    "core:default",
+    "core:webview:allow-create-webview-window",
+    "http:allow-fetch",
     {
       "identifier": "http:default",
       "allow": [

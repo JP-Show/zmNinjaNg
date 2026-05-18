@@ -31,6 +31,7 @@ import {
   Check,
   Lock,
   LockOpen,
+  MonitorPlay,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useState, useRef, useCallback, useMemo } from 'react';
@@ -41,6 +42,7 @@ import { PinPad } from '../kiosk/PinPad';
 import { useKioskLock } from '../../hooks/useKioskLock';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTvMode } from '../../hooks/useTvMode';
+import { MontageProfileDialog } from '../MontageProfileDialog';
 
 export interface SidebarContentProps {
   onMobileClose?: () => void;
@@ -70,12 +72,13 @@ export function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentPro
     }))
   );
 
-  // Get notification data for current profile
   const settings = currentProfile ? getProfileSettings(currentProfile.id) : null;
   const profileSettings = currentProfile ? getSettings(currentProfile.id) : null;
 
   const { t } = useTranslation();
   const { toast } = useToast();
+
+  const [montageDialogOpen, setMontageDialogOpen] = useState(false);
 
   const handleInsomniaToggle = () => {
     if (currentProfile && profileSettings) {
@@ -147,10 +150,8 @@ export function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentPro
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragIndex === null || !navListRef.current) return;
 
-    // Move the dragged item visually with the pointer
     setDragOffsetY(e.clientY - dragOriginY.current);
 
-    // Live swap when crossing another item's midpoint
     const items = navListRef.current.querySelectorAll('[data-nav-reorder]');
     for (let i = 0; i < items.length; i++) {
       if (i === dragIndex) continue;
@@ -162,7 +163,6 @@ export function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentPro
           [reordered[dragIndex], reordered[i]] = [reordered[i], reordered[dragIndex]];
           saveNavOrder(reordered);
           setDragIndex(i);
-          // Reset origin to current pointer so offset stays smooth after swap
           dragOriginY.current = e.clientY;
           setDragOffsetY(0);
         }
@@ -200,7 +200,6 @@ export function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentPro
       </div>
 
       <div className={cn("flex-1 overflow-y-auto overflow-x-hidden", isMobileDrawer ? "px-2 py-1" : "px-3 py-2")}>
-        {/* Reorder toggle — only when expanded */}
         {!isCollapsed && (
           <div className="flex justify-end gap-1 mb-1 px-1">
             {isReordering && (
@@ -330,12 +329,12 @@ export function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentPro
                         />
                       );
                     })()}
-
                   </>
                 )}
               </Link>
             );
           })}
+        
         </nav>
 
       <div className={cn("border-t bg-card/50 backdrop-blur-sm transition-all duration-300 mt-4", isCollapsed ? "p-2 space-y-3" : isMobileDrawer ? "px-2 py-2 space-y-1" : "px-3 py-2 space-y-1.5")}>
@@ -420,6 +419,27 @@ export function SidebarContent({ onMobileClose, isCollapsed }: SidebarContentPro
           error={pinError}
         />
       )}
+      <MontageProfileDialog 
+        open={montageDialogOpen} 
+        onClose={() => setMontageDialogOpen(false)} 
+      />
+      <button
+      onClick={() => {
+        setMontageDialogOpen(true);
+        onMobileClose?.();
+      }}
+      className={cn(
+        "flex items-center rounded-lg font-medium transition-all duration-200 group relative w-full text-left",
+        isMobileDrawer ? "gap-2 px-2 py-2 text-sm" : "gap-3 px-3 py-2.5 text-sm",
+        "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+        isCollapsed && "justify-center px-2"
+      )}
+      title={isCollapsed ? "Standalone Montage" : undefined}
+      >
+      <MonitorPlay className="h-4 w-4 transition-transform group-hover:scale-110 flex-shrink-0" />
+      {!isCollapsed && <span className="truncate">Standalone Montage</span>}
+      </button>
     </div>
+    
   );
 }

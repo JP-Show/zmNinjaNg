@@ -30,6 +30,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Monitors = lazy(() => import('./pages/Monitors'));
 const MonitorDetail = lazy(() => import('./pages/MonitorDetail'));
 const Montage = lazy(() => import('./pages/Montage'));
+const StandaloneMontage = lazy(() => import('./pages/StandaloneMontage'));
 const Events = lazy(() => import('./pages/Events'));
 const EventDetail = lazy(() => import('./pages/EventDetail'));
 const Timeline = lazy(() => import('./pages/Timeline'));
@@ -161,6 +162,15 @@ function AppRoutes() {
         <Route
           path="/setup"
           element={<Navigate to="/profiles/new" replace />}
+        />
+
+        <Route
+          path="/montage-standalone"
+          element={
+            <RouteErrorBoundary routePath="/montage-standalone">
+              <StandaloneMontage />
+            </RouteErrorBoundary>
+          }
         />
 
         <Route element={<AppLayout />}>
